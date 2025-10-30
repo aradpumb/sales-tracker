@@ -1,0 +1,3 @@
+date,salesperson,customer,machineModel,invoiceNumber,purchasedPrice,purchasedDate,totalPurchase,soldPrice,totalPrice,transportFee,additionalCost,additionalRevenue,revenue,installationCost,vat,commission,quantity,procurementPerson,remarks,purchaseBill,supplier,vatApplicable,courierLink,totalAmount,paymentStatus
+2025-10-01,John Doe,Acme Corp,Antminer S19 Pro,INV-1001,6500,2025-09-20,12000,8000,16000,200,150,500,17200,100,860,0,2,Jane Smith,First order with installation,PB-001,BitMain,Yes,https://track.example.com/ABC123,17000,Paid
+2025-10-05,Jane Roe,Globex LLC,WhatsMiner M50,INV-1002,5000,2025-09-18,5000,6500,6500,0,0,0,6500,0,0,0,1,Mark Lee,Standard sale,PB-002,MicroBT,No,https://track.example.com/XYZ789,6500,Pending

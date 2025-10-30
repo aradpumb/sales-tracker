@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id              BigInt        @id @default(autoincrement())
+  name            String?
+  email           String        @unique @db.VarChar(255)
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String?       @db.VarChar(255)
+  role            UserRole      @default(USER)
+  created_at      DateTime      @default(now()) @db.DateTime(0)
+  sales_person_id BigInt?
+  accounts        Account[]
+  sessions        Session[]
+  sales_person    sales_person? @relation(fields: [sales_person_id], references: [id])
+
+  @@index([sales_person_id], map: "user_sales_person_id_fkey")
+}
+
+model Account {
+  id                 BigInt  @id @default(autoincrement())
+  userId             BigInt
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+  oauth_token_secret String?
+  oauth_token        String?
+  user               user    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           BigInt   @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       BigInt
+  expires      DateTime
+  user         user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model customer {
+  id              BigInt    @id @default(autoincrement())
+  name            String    @db.VarChar(100)
+  account_manager String    @db.VarChar(100)
+  contact         String?   @db.VarChar(50)
+  email           String?   @unique @db.VarChar(255)
+  status          String    @db.VarChar(300)
+  expense         expense[]
+  sale            sale[]
+}
+
+model expense {
+  id              BigInt       @id @default(autoincrement())
+  sales_person_id BigInt
+  category        String       @db.VarChar(100)
+  expense_amount  Decimal?     @db.Decimal(15, 2)
+  expense_date    DateTime?    @db.Date
+  created_at      DateTime     @default(now()) @db.DateTime(0)
+  remarks         String?      @db.VarChar(255)
+  customer_id     BigInt
+  sales_person    sales_person @relation(fields: [sales_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "expense_ibfk_1")
+  customer        customer     @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_expense_customer")
+
+  @@index([sales_person_id], map: "sales_person_id")
+  @@index([customer_id], map: "fk_expense_customer")
+}
+
+model machine_model {
+  id         BigInt   @id @default(autoincrement())
+  model_name String   @db.VarChar(100)
+  hashrate   Float
+  power      Float
+  price      Decimal? @db.Decimal(15, 2)
+  algorithm  String   @db.VarChar(100)
+  coin       String   @db.VarChar(10)
+  sale       sale[]
+}
+
+model revenue {
+  id         BigInt    @id @default(autoincrement())
+  category   String    @db.VarChar(100)
+  sales_id   BigInt?
+  amount     Decimal?  @db.Decimal(15, 2)
+  date       DateTime? @db.Date
+  remarks    String?   @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.DateTime(0)
+  sale       sale?     @relation(fields: [sales_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "revenue_ibfk_1")
+
+  @@index([sales_id], map: "sales_id")
+}
+
+model sale {
+  id                   BigInt        @id @default(autoincrement())
+  sales_person_id      BigInt
+  customer_id          BigInt
+  machine_model_id     BigInt?
+  quantity             Int?
+  remarks              String?       @db.VarChar(255)
+  unit_purchase_price      Decimal?      @db.Decimal(18, 2) // unit purchase price (optional)
+  unit_sales_price           Decimal?      @db.Decimal(18, 2) // unit sales price (optional)
+  additional_revenue   Decimal?      @db.Decimal(18, 2)
+  invoice_number       String?       @db.VarChar(100)
+  procurement_incharge   String?       @db.VarChar(100)
+  sales_date           DateTime?     @db.Date
+
+  hosting_rate         Decimal?      @db.Decimal(18, 2)
+  pickup_cost          Decimal?      @db.Decimal(18, 2)
+  courier_charge       Decimal?      @db.Decimal(18, 2)
+  receipt_date         DateTime?     @db.Date
+  receipt_account      String?       @db.VarChar(255)
+  delivery_date        DateTime?     @db.Date
+  plugin_date          DateTime?     @db.Date
+
+  commission           Decimal?      @db.Decimal(18, 2)
+  purchase_date       DateTime?     @db.Date
+  vat                  Decimal?      @db.Decimal(18, 2)
+  unit_installation_charge    Decimal?      @db.Decimal(18, 2)
+  vendor               String?       @db.VarChar(100)
+
+
+  revenue              revenue[]
+  sales_person         sales_person  @relation(fields: [sales_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_1")
+  customer             customer      @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_2")
+  machine_model        machine_model? @relation(fields: [machine_model_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_3")
+
+  @@index([customer_id], map: "customer_id")
+  @@index([machine_model_id], map: "machine_model_id")
+  @@index([sales_person_id], map: "sales_person_id")
+}
+
+model sales_person {
+  id           BigInt    @id @default(autoincrement())
+  name         String    @db.VarChar(100)
+  phone        String?   @db.VarChar(20)
+  joining_date DateTime? @db.Date
+  salary       Decimal?  @db.Decimal(15, 2)
+  allowance    Decimal?  @db.Decimal(15, 2)
+  image_url    String?   @db.VarChar(500)
+  role         String?   @db.VarChar(100)
+  exclude_from_commission Boolean @default(false)
+  expense      expense[]
+  sale         sale[]
+  user         user[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}

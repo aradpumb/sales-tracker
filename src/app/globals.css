@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/* Theme */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9fafb; /* subtle off-white */
+  --foreground: #0f172a; /* slate-900 */
+  --muted: #64748b;      /* slate-500 */
+  --card: #ffffff;
+  --border: #e2e8f0;     /* slate-200 */
+  --ring: #a78bfa;       /* violet-400 */
+  --primary-start: #8b5cf6; /* violet-500 */
+  --primary-end: #10b981;   /* emerald-500 */
 }
 
 @theme inline {
@@ -14,13 +21,125 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b1020;
+    --foreground: #e5e7eb;
+    --muted: #94a3b8;
+    --card: #0f172a;
+    --border: #1f2937;
+    --ring: #a78bfa;
+    --primary-start: #8b5cf6;
+    --primary-end: #10b981;
   }
+}
+
+/* Base */
+html, body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui;
+}
+
+/* Utilities */
+.container-app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Mobile spacing */
+@media (max-width: 640px) {
+  .container-app {
+    padding: 16px;
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  color: white;
+  background-image: linear-gradient(90deg, var(--primary-start), var(--primary-end));
+}
+
+.btn-secondary {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.input, .select, .textarea {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.textarea {
+  height: auto;
+  padding: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.table th {
+  font-weight: 700;
+  color: var(--muted);
+  user-select: none;
+}
+
+.badge {
+  border-radius: 9999px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.gradient-title {
+  background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.progress-gradient {
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
+  border-radius: 9999px;
 }
