@@ -126,6 +126,7 @@ model sale {
   unit_sales_price           Decimal?      @db.Decimal(18, 2) // unit sales price (optional)
   additional_revenue   Decimal?      @db.Decimal(18, 2)
   invoice_number       String?       @db.VarChar(100)
+  bill_no              String?       @db.VarChar(100)
   procurement_incharge   String?       @db.VarChar(100)
   sales_date           DateTime?     @db.Date
 

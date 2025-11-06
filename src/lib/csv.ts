@@ -90,6 +90,7 @@ export function mapSalesRows(rows: Record<string, any>[]): SalesRecord[] {
         toOptNum(r["Unit Installation Charge"] ?? r.unitInstallationCharge ?? r.installation_cost);
       const hostingRate = toOptNum(r["Hosting Rate"] ?? r.hostingRate);
       const quantity = toNum(r["Quantity"] ?? r.quantity ?? r["Qty"]);
+      const billNo = r["Bill No."] ?? r.billNo ?? r["Bill No"] ?? r["Bill Number"] ?? null;
 
       const additionalRevenue = toOptNum(
         r["Additional Revenue"] ?? r.additionalRevenue ?? r.additional_revenue
@@ -111,7 +112,7 @@ export function mapSalesRows(rows: Record<string, any>[]): SalesRecord[] {
       const deliveryDate = r["Delivery Date"] ?? r.deliveryDate ?? undefined;
       const pluginDate = r["Plug-in Date"] ?? r.pluginDate ?? undefined;
 
-      const vendor = r["Vendor"] ?? r.vendor ?? r.supplier ?? r.Supplier ?? null;
+      const vendor = r["Vendor"] ?? r.vendor ?? r.vendor ?? r.Supplier ?? null;
 
       // Legacy/compatibility fields
       const machineModel = r.machineModel || r["Machine Model"] || r["Machine"] || r["Model"] || r["Description"] || "";
@@ -148,6 +149,8 @@ export function mapSalesRows(rows: Record<string, any>[]): SalesRecord[] {
         receiptAccount: receiptAccount ? String(receiptAccount) : undefined,
         deliveryDate: deliveryDate ? String(deliveryDate) : undefined,
         pluginDate: pluginDate ? String(pluginDate) : undefined,
+        vendor:vendor,
+        billNo: billNo,
         description: description ? String(description) : undefined,
 
         // Kept fields for compatibility

@@ -41,7 +41,8 @@ type SaleForm = {
     procurementPerson?: string;
     remarks?: string;
     purchaseBill?: string;
-    supplier?: string;
+    vendor?: string;
+    billNo?: string;
     vatApplicable?: boolean;
     courierLink?: string;
 };
@@ -68,7 +69,8 @@ const defaultForm: SaleForm = {
   procurementPerson: "",
   remarks: "",
   purchaseBill: "",
-  supplier: "",
+  vendor: "",
+  billNo: "",
   vatApplicable: undefined,
   courierLink: "",
 };
@@ -124,8 +126,9 @@ function mapDbSaleToRecord(row: any): SalesRecord {
     ...(row?.additional_cost != null ? { additionalCost: Number(row?.additional_cost) } : {}),
     ...(row?.commission != null ? { commission: Number(row?.commission) } : {}),
 
-    // vendor mapping to supplier field used in UI table
-    ...(row?.vendor ? { supplier: String(row?.vendor) } : row?.supplier ? { supplier: String(row?.supplier) } : {}),
+    // vendor mapping to vendor field used in UI table
+    ...(row?.vendor ? { vendor: String(row?.vendor) } : row?.vendor ? { vendor: String(row?.vendor) } : {}),
+    ...(row?.bill_no ? { billNo: String(row?.bill_no) } : row?.bill_no ? { billNo: String(row?.bill_no) } : {}),
 
     ...(row?.purchase_bill ? { purchaseBill: String(row?.purchase_bill) } : {}),
     ...(row?.courier_link ? { courierLink: String(row?.courier_link) } : {}),
@@ -222,7 +225,8 @@ export default function SalesPage() {
       vat: form.vat,
       procurementPerson: form.procurementPerson,
       purchasedDate: form.purchasedDate,
-      supplier: form.supplier || undefined,
+      vendor: form.vendor || undefined,
+      billNo: form.billNo || undefined,
       purchasedPrice: form.purchasedPrice,
       pickupCost: (form as any).pickupCost,
       commission: form.commission,
@@ -344,9 +348,8 @@ export default function SalesPage() {
         deliveryDate: (r as any).deliveryDate,
         pluginDate: (r as any).pluginDate,
 
-        // legacy/new naming compatibility
-        supplier: (r as any).supplier,
         vendor: (r as any).vendor,
+        billNo: (r as any).billNo,
 
         // extras
         purchaseBill: (r as any).purchaseBill,
@@ -399,7 +402,7 @@ export default function SalesPage() {
   const clientNames = React.useMemo(() => [...new Set(records.map((r) => r.customer).filter(Boolean))], [records]);
   const machineModelsList = React.useMemo(() => [...new Set(records.map((r) => r.machineModel).filter(Boolean))], [records]);
   const salesPersonList = React.useMemo(() => [...new Set(records.map((r) => r.salesperson).filter(Boolean))], [records]);
-  const supplierList = React.useMemo(() => [...new Set(records.map((r: any) => r.supplier).filter(Boolean))], [records]);
+  const supplierList = React.useMemo(() => [...new Set(records.map((r: any) => r.vendor).filter(Boolean))], [records]);
   const trackingLinks = React.useMemo(() => [...new Set(records.map((r: any) => r.courierLink).filter(Boolean))], [records]);
 
   const filteredRecords = React.useMemo(() => {
@@ -407,7 +410,7 @@ export default function SalesPage() {
       const clientMatch = !filterClient || r.customer.toLowerCase().includes(filterClient.toLowerCase());
       const modelMatch = !filterModel || r.machineModel.toLowerCase().includes(filterModel.toLowerCase());
       const spMatch = !filterSalesPerson || r.salesperson.toLowerCase().includes(filterSalesPerson.toLowerCase());
-      const supplierMatch = !filterSupplier || (r as any).supplier?.toLowerCase().includes(filterSupplier.toLowerCase());
+      const supplierMatch = !filterSupplier || (r as any).vendor?.toLowerCase().includes(filterSupplier.toLowerCase());
       const trackingMatch = !filterTracking || (r as any).courierLink?.toLowerCase().includes(filterTracking.toLowerCase());
 
       // Sales Date range match
@@ -435,7 +438,7 @@ export default function SalesPage() {
       const pickup = Number((r as any).pickupCost ?? 0) || 0;
       const courier = Number((r as any).courierCharge ?? (r as any).transportFee ?? 0) || 0;
       const commission = Number((r as any).commission ?? 0) || 0;
-      const vendor = String((r as any).supplier ?? "");
+      const vendor = String((r as any).vendor ?? "");
 
       const rev = unitSales * qty + unitInstall * qty + addRev + vat;
       const procurement = unitPurchase * qty + pickup + courier;
@@ -480,7 +483,8 @@ export default function SalesPage() {
     { key: "vat", header: "VAT", sortable: true, render: (r) => (r as any).vat ?? "" },
     { key: "procurementPerson", header: "Procurement Incharge", sortable: true, render: (r) => (r as any).procurementPerson ?? "" },
     { key: "purchasedDate", header: "Purchase Date", sortable: true, render: (r) => (r.purchasedDate ? new Date(r.purchasedDate).toLocaleDateString() : "") },
-    { key: "supplier", header: "Vendor", sortable: true, render: (r) => (r as any).supplier ?? "" },
+    { key: "vendor", header: "Vendor", sortable: true, render: (r) => (r as any).vendor ?? "" },
+    { key: "billNo", header: "Bill No.", sortable: true, render: (r) => (r as any).billNo ?? "" },
     { key: "purchasedPrice", header: "Unit Purchase Price", sortable: true, render: (r) => (r as any).purchasedPrice ?? "" },
     { key: "pickupCost", header: "Pickup Cost", sortable: true, render: (r) => (r as any).pickupCost ?? "" },
     { key: "commission", header: "Commission", sortable: true, render: (r) => (r as any).commission ?? "" },
@@ -560,7 +564,7 @@ export default function SalesPage() {
           {salesPersonList.map((name) => (<option key={name} value={name}>{name}</option>))}
         </select>
         <select className="select" value={filterSupplier} onChange={(e) => setFilterSupplier(e.target.value)}>
-          <option value="">Filter by Supplier</option>
+          <option value="">Filter by Vendor</option>
           {supplierList.map((name) => (<option key={name} value={name}>{name}</option>))}
         </select>
         <select className="select" value={filterTracking} onChange={(e) => setFilterTracking(e.target.value)}>
@@ -838,12 +842,12 @@ export default function SalesPage() {
 
 
           <div>
-            <label className="text-sm mb-1 block">Purchase Bill</label>
+            <label className="text-sm mb-1 block">Bill Number</label>
             <input
               className="input"
-              value={form.purchaseBill ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, purchaseBill: e.target.value || undefined }))}
-              placeholder="PB-12345"
+              value={form.billNo ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, billNo: e.target.value || undefined }))}
+              placeholder="ADG221"
             />
           </div>
 
@@ -851,8 +855,8 @@ export default function SalesPage() {
             <label className="text-sm mb-1 block">Vendor</label>
             <input
               className="input"
-              value={form.supplier ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, supplier: e.target.value || undefined }))}
+              value={form.vendor ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value || undefined }))}
               placeholder="Vendor name"
             />
           </div>
@@ -1011,7 +1015,8 @@ export default function SalesPage() {
                   procurementPerson: editRow.procurementPerson,
                   remarks: editRow.remarks,
                   purchaseBill: editRow.purchaseBill,
-                  supplier: editRow.supplier,
+                  vendor: editRow.vendor,
+                  billNo: editRow.billNo,
                   vatApplicable: editRow.vatApplicable,
                   courierLink: editRow.courierLink,
                 };
@@ -1220,11 +1225,11 @@ export default function SalesPage() {
             </div>
 
             <div>
-              <label className="text-sm mb-1 block">Supplier</label>
+              <label className="text-sm mb-1 block">Vendor</label>
               <input
                 className="input"
-                value={editRow?.supplier ?? ""}
-                onChange={(e) => setEditRow((r: any) => ({ ...r, supplier: e.target.value || undefined }))}
+                value={editRow?.vendor ?? ""}
+                onChange={(e) => setEditRow((r: any) => ({ ...r, vendor: e.target.value || undefined }))}
               />
             </div>
 

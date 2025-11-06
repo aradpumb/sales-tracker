@@ -83,7 +83,10 @@ export async function POST(req: Request) {
 
     // Create rows sequentially to avoid long-running interactive transaction timeouts
     for (let i = 0; i < rows.length; i++) {
+
       const r = rows[i] || {};
+
+      console.log("Data=======",r);
       try {
         const d = r.date ? (parseDateAny(r.date) ?? new Date()) : new Date();
         const qty = Number(r.quantity ?? 1);
@@ -91,7 +94,54 @@ export async function POST(req: Request) {
         const sold = Number(r.soldPrice ?? 0);
         const addRev = Number(r.additionalRevenue ?? 0);
         const total = Number(r.totalPrice ?? (sold + addRev) * qty);
-        const status = r.paymentStatus ?? "Pending";
+        // Resolve vendor from multiple possible keys/aliases and common typos
+        const normalizeKey = (k: string) =>
+          k.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const vendorKey = Object.keys(r).find((k) => {
+          const nk = normalizeKey(String(k));
+          return (
+            nk === "vendor" ||
+            nk === "vendorname" ||
+            nk === "supplier" ||
+            nk === "seller"
+          );
+        });
+        const rawVendor =
+          vendorKey != null
+            ? (r as any)[vendorKey]
+            : (r as any).vendor ??
+              (r as any).Vendor ??
+              (r as any)["Vendor Name"] ??
+              (r as any).Supplier ??
+              (r as any)["Supplier Name"] ??
+              null;
+        const vendor =
+          rawVendor != null && rawVendor !== "" ? String(rawVendor) : null;
+
+        // Resolve Bill No. from common header variants (case/space/punctuation-insensitive)
+        const normalizeKey2 = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const billNoKey = Object.keys(r).find((k) => {
+          const nk = normalizeKey2(String(k));
+          return (
+            nk === "billno" ||
+            nk === "billno." ||
+            nk === "billnumber" ||
+            nk === "bill" ||
+            nk === "bill_no"
+          );
+        });
+        const rawBillNo =
+          billNoKey != null
+            ? (r as any)[billNoKey]
+            : (r as any)["Bill No"] ??
+              (r as any)["Bill No."] ??
+              (r as any)["Bill Number"] ??
+              (r as any).billNo ??
+              (r as any).bill_no ??
+              (r as any).bill ??
+              (r as any).Bill ??
+              null;
+        const billNo = rawBillNo != null && rawBillNo !== "" ? String(rawBillNo) : null;
 
         const purchasedDateParsed = r.purchasedDate ? parseDateAny(r.purchasedDate) : null;
 
@@ -144,6 +194,7 @@ export async function POST(req: Request) {
             unit_sales_price: sold,
             additional_revenue: addRev,
             invoice_number: r.invoiceNumber ?? null,
+            bill_no: billNo,
             procurement_incharge: (r as any).procurementIncharge ?? (r as any).procurementPerson ?? null,
 
             hosting_rate: (r as any).hostingRate != null ? Number((r as any).hostingRate) : null,
@@ -163,7 +214,7 @@ export async function POST(req: Request) {
             purchase_date: purchasedDateParsed,
             vat: r.vat != null ? Number(r.vat) : null,
             unit_installation_charge,
-            vendor: (r as any).vendor ?? (r as any).supplier ?? null,
+            vendor: vendor,
 
             sales_person_id: spId,
             customer_id: custId,

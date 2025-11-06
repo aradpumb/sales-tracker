@@ -193,7 +193,7 @@ export default function SalespersonDetailPage() {
             const courierCharge = Number(s.courier_charge ?? s.courierCharge ?? s.transport_fee ?? 0);
             const commission = Number(s.commission ?? 0);
             const hostingRate = Number(s.hosting_rate ?? 0);
-            const vendor = String(s.vendor ?? s.supplier ?? "");
+            const vendor = String(s.vendor ?? s.vendor ?? "");
 
             // New formulas
             const revenue = unitSalesPrice * quantity + unitInstallationCharge * quantity + additionalRevenue + vat;
@@ -212,7 +212,7 @@ export default function SalespersonDetailPage() {
               receiptDate: s.receipt_date ? new Date(s.receipt_date).toISOString() : "",
               receiptAccount: s.receipt_account ?? "",
               courierLink: s.courier_link ?? "",
-              supplier: vendor,
+              vendor: vendor,
               purchasedPrice: Number(s.unit_purchase_price ?? s.purchased_price ?? unitPurchasePrice ?? 0),
               purchasedDate: s.purchase_date
                 ? new Date(s.purchase_date).toISOString()
@@ -287,7 +287,7 @@ export default function SalespersonDetailPage() {
     { key: "vat", header: "VAT", sortable: true, render: (r) => currency(r.vat) },
     { key: "procurementPerson", header: "Procurement Incharge", sortable: true, render: (r) => r.procurementPerson ?? "" },
     { key: "purchasedDate", header: "Purchase Date", sortable: true, render: (r) => (r.purchasedDate ? new Date(r.purchasedDate).toLocaleDateString() : "") },
-    { key: "supplier", header: "Vendor", sortable: true },
+    { key: "vendor", header: "Vendor", sortable: true },
     { key: "purchasedPrice", header: "Unit Purchase Price", sortable: true, render: (r) => currency(r.purchasedPrice) },
     { key: "pickupCost", header: "Pickup Cost", sortable: true, render: (r) => currency(r.pickupCost ?? 0) },
     { key: "commission", header: "Commission", sortable: true, render: (r) => currency(r.commission) },

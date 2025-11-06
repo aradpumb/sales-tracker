@@ -26,8 +26,7 @@ export type SalesRecord = {
   commission?: number;
   procurementPerson?: string; // "Procurement Incharge"
   revenue?: number;
-
-  // Newly added fields mapping the new CSV
+  billNo?: string;
   description?: string; // "Description"
   hostingRate?: number; // "Hosting Rate"
   receiptDate?: string; // "Receipt Date"
@@ -38,13 +37,9 @@ export type SalesRecord = {
   courierCharge?: number; // "Courier Charge"
   deliveryDate?: string; // "Delivery Date"
   pluginDate?: string; // "Plug-in Date"
-
-  // Newly added fields
   purchaseBill?: string;
-  supplier?: string; // "Vendor"
+  vendor?: string; // "Vendor"
   vatApplicable?: boolean;
-
-  // UI-only extension
   courierLink?: string;
 };
 

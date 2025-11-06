@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       invoiceNumber,
       procurementPerson,
       purchasedDate, // purchase date
-      supplier,      // vendor
+      vendor,      // vendor
       remarks,
     } = body || {};
 
@@ -151,6 +151,15 @@ export async function POST(req: Request) {
     const plugin_date_parsed = pluginDate ? parseDateAny(pluginDate) : null;
     const purchase_date_parsed = purchasedDate ? parseDateAny(purchasedDate) : purchasedDateParsed;
 
+    // Resolve Bill No. from common variants; empty string becomes null
+    const billNoRaw =
+      body?.billNo ??
+      body?.bill_no ??
+      (body as any)?.["Bill No"] ??
+      (body as any)?.["Bill No."] ??
+      null;
+    const billNo = billNoRaw != null && billNoRaw !== "" ? String(billNoRaw) : null;
+
     const created = await prismaAny.sale.create({
       data: {
         sales_date: d,
@@ -162,6 +171,7 @@ export async function POST(req: Request) {
         unit_sales_price,
         additional_revenue: addRev,
         invoice_number: invoiceNumber ?? body.invoiceNumber ?? null,
+        bill_no: billNo,
         procurement_incharge: procurementPerson ?? body.procurement_incharge ?? null,
 
         hosting_rate,
@@ -176,7 +186,7 @@ export async function POST(req: Request) {
         purchase_date: purchase_date_parsed,
         vat: vat != null ? Number(vat) : Number(body.vat ?? 0),
         unit_installation_charge,
-        vendor: supplier ?? body.vendor ?? null,
+        vendor: vendor ?? body.vendor ?? null,
 
         sales_person_id: spId,
         customer_id: custId,
@@ -225,11 +235,39 @@ export async function PUT(req: Request) {
     if (body.quantity != null) data.quantity = Number(body.quantity);
     if (body.remarks != null) data.remarks = String(body.remarks);
     if (body.invoiceNumber != null) data.invoice_number = String(body.invoiceNumber);
+    // Update bill_no when provided in any supported key; empty string clears to null
+    if (
+      Object.prototype.hasOwnProperty.call(body, "billNo") ||
+      Object.prototype.hasOwnProperty.call(body, "bill_no") ||
+      Object.prototype.hasOwnProperty.call(body as any, "Bill No") ||
+      Object.prototype.hasOwnProperty.call(body as any, "Bill No.")
+    ) {
+      const raw =
+        (body as any).billNo ??
+        (body as any).bill_no ??
+        (body as any)["Bill No"] ??
+        (body as any)["Bill No."];
+      data.bill_no = raw != null && raw !== "" ? String(raw) : null;
+    }
+    // Update bill_no when provided in any supported key; empty string clears to null
+    if (
+      Object.prototype.hasOwnProperty.call(body, "billNo") ||
+      Object.prototype.hasOwnProperty.call(body, "bill_no") ||
+      Object.prototype.hasOwnProperty.call(body as any, "Bill No") ||
+      Object.prototype.hasOwnProperty.call(body as any, "Bill No.")
+    ) {
+      const raw =
+        (body as any).billNo ??
+        (body as any).bill_no ??
+        (body as any)["Bill No"] ??
+        (body as any)["Bill No."];
+      data.bill_no = raw != null && raw !== "" ? String(raw) : null;
+    }
     if (body.procurementPerson != null || body.procurement_incharge != null)
       data.procurement_incharge = String(body.procurementPerson ?? body.procurement_incharge);
     if (purchasedDateParsed) data.purchase_date = purchasedDateParsed;
     if (body.vat != null) data.vat = Number(body.vat);
-    if (body.supplier != null || body.vendor != null) data.vendor = String(body.supplier ?? body.vendor);
+    if (body.vendor != null || body.vendor != null) data.vendor = String(body.vendor ?? body.vendor);
     if (body.commission != null) data.commission = Number(body.commission);
     if (body.pickupCost != null || body.pickup_cost != null)
       data.pickup_cost = Number(body.pickupCost ?? body.pickup_cost);

@@ -237,7 +237,7 @@ export default function PerformancePage() {
       const pickup = Number(s.pickup_cost ?? 0);
       const courier = Number(s.courier_charge ?? s.transport_fee ?? 0);
       const commission = Number(s.commission ?? 0);
-      const vendor = String(s.vendor ?? s.supplier ?? "");
+      const vendor = String(s.vendor ?? s.vendor ?? "");
 
       const saleRevenue = unitSalesPrice * qty + unitInstall * qty + addRev + vat;
       const procurement = unitPurchase * qty + pickup + courier;

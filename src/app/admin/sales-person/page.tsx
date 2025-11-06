@@ -118,7 +118,7 @@ export default function SalesPersonPage() {
       const created = await res.json();
       setRows((prev) => [...prev, created]);
       setOpen(false);
-      setForm({ name: "", phone: "", joining_date: "", salary: "", allowance: "", image_url: "", role:""});
+      setForm({ name: "", phone: "", joining_date: "", salary: "", allowance: "", image_url: "", role:"", exclude_from_commission: false });
     } catch {
       // no-op
     }
