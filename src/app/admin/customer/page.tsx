@@ -131,7 +131,9 @@ export default function CustomerPage() {
 
                 if (!Array.isArray(mapped) || mapped.length === 0) {
                   alert("No valid customer rows found in CSV. Make sure each row has a 'name' column.");
-                  e.currentTarget.value = "";
+                    if (e.currentTarget) {
+                      (e.currentTarget as HTMLInputElement).value = "";
+                    }
                   return;
                 }
 
@@ -178,7 +180,9 @@ export default function CustomerPage() {
                 console.error(err);
                 alert(err?.message || "Failed to import CSV");
               } finally {
-                e.currentTarget.value = "";
+                if (e.currentTarget) {
+                  e.currentTarget.value = "";
+                }
               }
             }}
           />

@@ -116,39 +116,35 @@ model revenue {
 }
 
 model sale {
-  id                   BigInt        @id @default(autoincrement())
-  sales_person_id      BigInt
-  customer_id          BigInt
-  machine_model_id     BigInt?
-  quantity             Int?
-  remarks              String?       @db.VarChar(255)
-  unit_purchase_price      Decimal?      @db.Decimal(18, 2) // unit purchase price (optional)
-  unit_sales_price           Decimal?      @db.Decimal(18, 2) // unit sales price (optional)
-  additional_revenue   Decimal?      @db.Decimal(18, 2)
-  invoice_number       String?       @db.VarChar(100)
-  bill_no              String?       @db.VarChar(100)
-  procurement_incharge   String?       @db.VarChar(100)
-  sales_date           DateTime?     @db.Date
-
-  hosting_rate         Decimal?      @db.Decimal(18, 2)
-  pickup_cost          Decimal?      @db.Decimal(18, 2)
-  courier_charge       Decimal?      @db.Decimal(18, 2)
-  receipt_date         DateTime?     @db.Date
-  receipt_account      String?       @db.VarChar(255)
-  delivery_date        DateTime?     @db.Date
-  plugin_date          DateTime?     @db.Date
-
-  commission           Decimal?      @db.Decimal(18, 2)
-  purchase_date       DateTime?     @db.Date
-  vat                  Decimal?      @db.Decimal(18, 2)
-  unit_installation_charge    Decimal?      @db.Decimal(18, 2)
-  vendor               String?       @db.VarChar(100)
-
-
-  revenue              revenue[]
-  sales_person         sales_person  @relation(fields: [sales_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_1")
-  customer             customer      @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_2")
-  machine_model        machine_model? @relation(fields: [machine_model_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_3")
+  id                       BigInt         @id @default(autoincrement())
+  sales_person_id          BigInt
+  customer_id              BigInt
+  machine_model_id         BigInt?
+  quantity                 Int?
+  remarks                  String?        @db.VarChar(255)
+  additional_revenue       Decimal?       @db.Decimal(18, 2)
+  invoice_number           String?        @db.VarChar(100)
+  sales_date               DateTime?      @db.Date
+  commission               Decimal?       @db.Decimal(18, 2)
+  vat                      Decimal?       @db.Decimal(18, 2)
+  courier_charge           Decimal?       @db.Decimal(18, 2)
+  delivery_date            DateTime?      @db.Date
+  hosting_rate             Decimal?       @db.Decimal(18, 2)
+  pickup_cost              Decimal?       @db.Decimal(18, 2)
+  plugin_date              DateTime?      @db.Date
+  receipt_account          String?        @db.VarChar(255)
+  receipt_date             DateTime?      @db.Date
+  procurement_incharge     String?        @db.VarChar(100)
+  purchase_date            DateTime?      @db.Date
+  unit_installation_charge Decimal?       @db.Decimal(18, 2)
+  unit_purchase_price      Decimal?       @db.Decimal(18, 2)
+  unit_sales_price         Decimal?       @db.Decimal(18, 2)
+  vendor                   String?        @db.VarChar(100)
+  bill_no                  String?        @db.VarChar(100)
+  revenue                  revenue[]
+  sales_person             sales_person   @relation(fields: [sales_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_1")
+  customer                 customer       @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_2")
+  machine_model            machine_model? @relation(fields: [machine_model_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sale_ibfk_3")
 
   @@index([customer_id], map: "customer_id")
   @@index([machine_model_id], map: "machine_model_id")
@@ -156,18 +152,18 @@ model sale {
 }
 
 model sales_person {
-  id           BigInt    @id @default(autoincrement())
-  name         String    @db.VarChar(100)
-  phone        String?   @db.VarChar(20)
-  joining_date DateTime? @db.Date
-  salary       Decimal?  @db.Decimal(15, 2)
-  allowance    Decimal?  @db.Decimal(15, 2)
-  image_url    String?   @db.VarChar(500)
-  role         String?   @db.VarChar(100)
-  exclude_from_commission Boolean @default(false)
-  expense      expense[]
-  sale         sale[]
-  user         user[]
+  id                      BigInt    @id @default(autoincrement())
+  name                    String    @db.VarChar(100)
+  phone                   String?   @db.VarChar(20)
+  joining_date            DateTime? @db.Date
+  salary                  Decimal?  @db.Decimal(15, 2)
+  allowance               Decimal?  @db.Decimal(15, 2)
+  image_url               String?   @db.VarChar(500)
+  role                    String?   @db.VarChar(100)
+  exclude_from_commission Boolean   @default(false)
+  expense                 expense[]
+  sale                    sale[]
+  user                    user[]
 }
 
 enum UserRole {

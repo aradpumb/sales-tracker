@@ -13,9 +13,10 @@ export async function POST(req: Request) {
     }
     const prismaAny = prisma as any;
 
-    const created: any[] = [];
+    const validRows: any[] = [];
     const failed: Array<{ row: any; error: string }> = [];
 
+    // First pass: validate all rows and prepare data
     for (const r of rows) {
       if (!r?.name) {
         failed.push({ row: r, error: "Missing required name" });
@@ -32,18 +33,36 @@ export async function POST(req: Request) {
           ? String(r.email)
           : `imported+${Date.now()}${Math.random().toString(36).slice(2, 6)}@import.local`;
 
-      // Truncate contact to fit DB column (VARCHAR(20))
+      // Truncate contact to fit DB column (VARCHAR(50))
       const contactRaw = r.contact ?? null;
       const contactSafe = contactRaw && typeof contactRaw === "string" ? contactRaw.slice(0, 50) : null;
 
+      validRows.push({
+        name: r.name,
+        account_manager: accountManagerSafe,
+        status: statusSafe,
+        email: emailSafe,
+        contact: contactSafe,
+      });
+    }
+
+    let created: any[] = [];
+
+    // Bulk insert valid rows
+    if (validRows.length > 0) {
       try {
-        const c = await prismaAny.customer.create({
-          data: {
-            name: r.name,
-            account_manager: accountManagerSafe,
-            status: statusSafe,
-            email: emailSafe,
-            contact: contactSafe,
+        const result = await prismaAny.customer.createMany({
+          data: validRows,
+          skipDuplicates: true, // Skip rows that would cause unique constraint violations
+        });
+
+        // Fetch the created records to return them
+        // Note: createMany doesn't return the created records, so we need to fetch them
+        const createdRecords = await prismaAny.customer.findMany({
+          where: {
+            email: {
+              in: validRows.map(r => r.email)
+            }
           },
           select: {
             id: true,
@@ -54,10 +73,17 @@ export async function POST(req: Request) {
             contact: true,
           },
         });
-        created.push(c);
+
+        // Convert BigInt to string to avoid serialization issues
+        created = createdRecords.map((record: any) => ({
+          ...record,
+          id: record.id.toString(), // Convert BigInt to string
+        }));
+
+        console.log(`Bulk created ${result.count} customers`);
       } catch (err: any) {
-        // don't abort entire import on single row failure
-        failed.push({ row: r, error: err?.message ?? "create failed" });
+        console.error("Bulk insert failed:", err);
+        return NextResponse.json({ error: `Bulk insert failed: ${err.message}` }, { status: 500 });
       }
     }
 

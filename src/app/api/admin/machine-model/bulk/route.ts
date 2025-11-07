@@ -23,24 +23,45 @@ export async function POST(req: Request) {
       return isFinite(n) ? n : undefined;
     };
 
-    const created: any[] = [];
+    const validRows: any[] = [];
     const failed: Array<{ row: any; error: string }> = [];
 
+    // First pass: validate all rows and prepare data
     for (const r of rows) {
       if (!r?.model_name) {
         failed.push({ row: r, error: "Missing model_name" });
         continue;
       }
 
+      const modelData = {
+        model_name: String(r.model_name),
+        hashrate: toNum(r.hashrate),
+        power: toNum(r.power),
+        price: toNum(r.price),
+        algorithm: typeof r.algorithm === "string" ? r.algorithm.trim() : String(r.algorithm ?? ""),
+        coin: typeof r.coin === "string" ? r.coin.trim() : String(r.coin ?? ""),
+      };
+
+      validRows.push(modelData);
+    }
+
+    let created: any[] = [];
+
+    // Bulk insert valid rows
+    if (validRows.length > 0) {
       try {
-        const c = await prismaAny.machine_model.create({
-          data: {
-            model_name: String(r.model_name),
-            hashrate: toNum(r.hashrate),
-            power: toNum(r.power),
-            price: toNum(r.price),
-            algorithm: typeof r.algorithm === "string" ? r.algorithm.trim() : String(r.algorithm ?? ""),
-            coin: typeof r.coin === "string" ? r.coin.trim() : String(r.coin ?? ""),
+        const result = await prismaAny.machine_model.createMany({
+          data: validRows,
+          skipDuplicates: true, // Skip rows that would cause unique constraint violations
+        });
+
+        // Fetch the created records to return them
+        // Note: createMany doesn't return the created records, so we need to fetch them
+        const createdRecords = await prismaAny.machine_model.findMany({
+          where: {
+            model_name: {
+              in: validRows.map(r => r.model_name)
+            }
           },
           select: {
             id: true,
@@ -52,9 +73,17 @@ export async function POST(req: Request) {
             coin: true,
           },
         });
-        created.push(c);
+
+        // Convert BigInt to string to avoid serialization issues
+        created = createdRecords.map((record: any) => ({
+          ...record,
+          id: record.id.toString(), // Convert BigInt to string
+        }));
+
+        console.log(`Bulk created ${result.count} machine models`);
       } catch (err: any) {
-        failed.push({ row: r, error: err?.message ?? "create failed" });
+        console.error("Bulk insert failed:", err);
+        return NextResponse.json({ error: `Bulk insert failed: ${err.message}` }, { status: 500 });
       }
     }
 
