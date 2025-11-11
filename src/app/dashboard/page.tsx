@@ -16,14 +16,15 @@ function isCMHKVendor(vendor: string) {
   return /cm\s*hk/.test(v) || v === "cmhk";
 }
 
-// Revenue = total price + (installation cost × quantity) + vat
+// Revenue matches Sales page totals: unit sales + installation + additional revenue + VAT
 function computeRevenue(rec: SalesRecord): number {
-  const quantity = Number((rec as any).quantity ?? 1) || 1;
-  const unitSalesPrice = Number((rec as any).unitSalesPrice ?? (rec as any).soldPrice ?? 0) || 0;
-  const totalPrice = Number((rec as any).totalPrice ?? (rec as any).totalAmount ?? unitSalesPrice * quantity) || 0;
-  const installationCost = Number((rec as any).installationCost ?? 0) || 0;
+  const qty = Number((rec as any).quantity ?? 1) || 1;
+  const unitSales = Number((rec as any).soldPrice ?? (rec as any).unitSalesPrice ?? 0) || 0;
+  const unitInstall = Number((rec as any).installationCost ?? (rec as any).unitInstallationCharge ?? 0) || 0;
+  const addRev = Number((rec as any).additionalRevenue ?? 0) || 0;
   const vat = Number((rec as any).vat ?? 0) || 0;
-  const revenue = totalPrice + installationCost * quantity + vat;
+  const revenue = unitSales * qty + unitInstall * qty + addRev + vat;
+  console.log("revenue=",revenue);
   return isFinite(revenue) ? revenue : 0;
 }
 
@@ -32,12 +33,6 @@ function computeRevenue(rec: SalesRecord): number {
 // Margin (CMHK) = Revenue − Procurement − commission − vat
 // Margin (non-CMHK) = Margin(CMHK) − (quantity × installation cost)
 function computeSaleProfit(rec: SalesRecord): number {
-  const quantity = Number((rec as any).quantity ?? 1) || 1;
-
-  const unitSalesPrice = Number((rec as any).unitSalesPrice ?? (rec as any).soldPrice ?? 0) || 0;
-  const totalPrice = Number((rec as any).totalPrice ?? rec.totalAmount ?? unitSalesPrice * quantity) || 0;
-  const installationCost = Number((rec as any).installationCost ?? 0) || 0;
-  const vat = Number((rec as any).vat ?? 0) || 0;
 
   const unitPurchasePrice = Number((rec as any).unitPurchasePrice ?? (rec as any).purchasedPrice ?? 0) || 0;
   const pickupCost = Number((rec as any).pickupCost ?? 0) || 0;
@@ -45,10 +40,17 @@ function computeSaleProfit(rec: SalesRecord): number {
   const commission = Number((rec as any).commission ?? 0) || 0;
   const vendor = String((rec as any).vendor ?? "");
 
-  const revenue = totalPrice + installationCost * quantity + vat;
-  const procurement = unitPurchasePrice * quantity + pickupCost + courierCharge;
-  const baseMargin = revenue - procurement - commission - vat;
-  const extraInstallDeduction = isCMHKVendor(vendor) ? 0 : installationCost * quantity;
+
+    const qty = Number((rec as any).quantity ?? 1) || 1;
+    const unitSales = Number((rec as any).soldPrice ?? (rec as any).unitSalesPrice ?? 0) || 0;
+    const unitInstall = Number((rec as any).installationCost ?? (rec as any).unitInstallationCharge ?? 0) || 0;
+    const addRev = Number((rec as any).additionalRevenue ?? 0) || 0;
+    const vat = Number((rec as any).vat ?? 0) || 0;
+    const revenue = unitSales * qty + unitInstall * qty + addRev + vat;
+
+  const procurement = unitPurchasePrice * qty + pickupCost + courierCharge;
+  const baseMargin = revenue - procurement - commission - vat
+  const extraInstallDeduction = isCMHKVendor(vendor) ? 0 : unitInstall * qty;
   const margin = baseMargin - extraInstallDeduction;
 
   return isFinite(margin) ? margin : 0;
@@ -92,20 +94,15 @@ export default function DashboardPage() {
     );
   }
 
-  // Total Revenue = totalPrice + (installationCost * quantity) + vat across all sales
-  const totalRevenue = sales.reduce((sum, r) => {
-    const totalPrice = Number((r as any).totalPrice ?? r.totalAmount ?? 0) || 0;
-    const installationCost = Number((r as any).installationCost ?? 0) || 0;
-    const quantity = Number((r as any).quantity ?? 1) || 1;
-    const vat = Number((r as any).vat ?? 0) || 0;
-    const rev = totalPrice + installationCost * quantity + vat;
-    return sum + (isFinite(rev) ? rev : 0);
-  }, 0);
+  // Total Revenue matches Sales page formula across all sales
+  const totalRevenue = sales.reduce((sum, r) => sum + computeRevenue(r), 0);
 
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
   // Lifetime net profit across all salespeople = sum of all sale margins − sum of all expenses
-  const totalMargin = React.useMemo(() => sales.reduce((sum, r) => sum + computeSaleProfit(r), 0), [sales]);
+  const totalMargin = sales.reduce((sum, r) => sum + computeSaleProfit(r), 0);
+  console.log("margin=",totalMargin);
+  console.log("expense=",totalExpenses);
   const netProfit = totalMargin - totalExpenses;
 
   const recentSales = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
