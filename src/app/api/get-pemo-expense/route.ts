@@ -206,7 +206,7 @@ export async function GET(req: Request) {
     });
 
     const salesPersonByName = new Map<string, bigint>();
-    salesPersons.forEach(sp => {
+    salesPersons.forEach((sp: { name: string; id: string | number | bigint | boolean; }) => {
       salesPersonByName.set(sp.name.toLowerCase(), BigInt(sp.id));
     });
 

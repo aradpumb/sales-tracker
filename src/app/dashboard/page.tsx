@@ -8,6 +8,50 @@ function currency(n: number) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(n);
 }
 
+// Treat variants like "CMHK", "CM HK", "CM HK.", case-insensitively, as CMHK vendor
+function isCMHKVendor(vendor: string) {
+  const v = String(vendor || "").trim().toLowerCase();
+  return /cm\s*hk/.test(v) || v === "cmhk";
+}
+
+// Revenue = total price + (installation cost × quantity) + vat
+function computeRevenue(rec: SalesRecord): number {
+  const quantity = Number((rec as any).quantity ?? 1) || 1;
+  const unitSalesPrice = Number((rec as any).unitSalesPrice ?? (rec as any).soldPrice ?? 0) || 0;
+  const totalPrice = Number((rec as any).totalPrice ?? (rec as any).totalAmount ?? unitSalesPrice * quantity) || 0;
+  const installationCost = Number((rec as any).installationCost ?? 0) || 0;
+  const vat = Number((rec as any).vat ?? 0) || 0;
+  const revenue = totalPrice + installationCost * quantity + vat;
+  return isFinite(revenue) ? revenue : 0;
+}
+
+// Revenue = total price + (installation cost × quantity) + vat
+// Procurement = (quantity × unit purchase price) + pickup cost + courier charge
+// Margin (CMHK) = Revenue − Procurement − commission − vat
+// Margin (non-CMHK) = Margin(CMHK) − (quantity × installation cost)
+function computeSaleProfit(rec: SalesRecord): number {
+  const quantity = Number((rec as any).quantity ?? 1) || 1;
+
+  const unitSalesPrice = Number((rec as any).unitSalesPrice ?? (rec as any).soldPrice ?? 0) || 0;
+  const totalPrice = Number((rec as any).totalPrice ?? rec.totalAmount ?? unitSalesPrice * quantity) || 0;
+  const installationCost = Number((rec as any).installationCost ?? 0) || 0;
+  const vat = Number((rec as any).vat ?? 0) || 0;
+
+  const unitPurchasePrice = Number((rec as any).unitPurchasePrice ?? (rec as any).purchasedPrice ?? 0) || 0;
+  const pickupCost = Number((rec as any).pickupCost ?? 0) || 0;
+  const courierCharge = Number((rec as any).courierCharge ?? (rec as any).transportFee ?? 0) || 0;
+  const commission = Number((rec as any).commission ?? 0) || 0;
+  const vendor = String((rec as any).vendor ?? "");
+
+  const revenue = totalPrice + installationCost * quantity + vat;
+  const procurement = unitPurchasePrice * quantity + pickupCost + courierCharge;
+  const baseMargin = revenue - procurement - commission - vat;
+  const extraInstallDeduction = isCMHKVendor(vendor) ? 0 : installationCost * quantity;
+  const margin = baseMargin - extraInstallDeduction;
+
+  return isFinite(margin) ? margin : 0;
+}
+
 export default function DashboardPage() {
   const [sales, setSales] = React.useState<SalesRecord[]>([]);
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
@@ -29,23 +73,9 @@ export default function DashboardPage() {
 
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
-  // Total Profit = Revenue − (totalPurchase + transportFee + additionalCost)
-  const totalProfit = sales.reduce((sum, r) => {
-    const totalPrice = Number((r as any).totalPrice ?? r.totalAmount ?? 0) || 0;
-    const totalPurchase = Number((r as any).totalPurchase ?? 0) || 0;
-    const additionalCost = Number((r as any).additionalCost ?? 0) || 0;
-    const transportFee = Number((r as any).transportFee ?? 0) || 0;
-    const installationCost = Number((r as any).installationCost ?? 0) || 0;
-    const quantity = Number((r as any).quantity ?? 1) || 1;
-    const vat = Number((r as any).vat ?? 0) || 0;
-
-    const revenue = totalPrice + installationCost * quantity + vat;
-    const saleProfit = revenue - (totalPurchase + transportFee + additionalCost);
-
-    return sum + (isFinite(saleProfit) ? saleProfit : 0);
-  }, 0);
-
-  const profit = totalProfit; // Use totalProfit for display
+  // Lifetime net profit across all salespeople = sum of all sale margins − sum of all expenses
+  const totalMargin = React.useMemo(() => sales.reduce((sum, r) => sum + computeSaleProfit(r), 0), [sales]);
+  const netProfit = totalMargin - totalExpenses;
 
   const recentSales = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
   const recentExpenses = [...expenses].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
@@ -68,12 +98,12 @@ export default function DashboardPage() {
         </div>
         <div className="card p-5">
           <div className="text-sm text-[var(--muted)]">Profit</div>
-          <div className="text-2xl font-bold">{currency(profit)}</div>
+          <div className="text-2xl font-bold">{currency(netProfit)}</div>
           <div className="mt-3 bg-gray-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
             <div
               className="progress-gradient"
               style={{
-                width: `${totalRevenue ? Math.max(0, Math.min(100, (profit / totalRevenue) * 100)) : 0}%`,
+                width: `${totalRevenue ? Math.max(0, Math.min(100, (netProfit / totalRevenue) * 100)) : 0}%`,
               }}
             />
           </div>
@@ -97,7 +127,7 @@ export default function DashboardPage() {
                       {new Date(r.date).toLocaleDateString()} • {r.machineModel}
                     </div>
                   </div>
-                  <div className="font-semibold">{currency(((r as any).totalPrice ?? r.totalAmount) as number)}</div>
+                  <div className="font-semibold">{currency(computeRevenue(r))}</div>
                 </li>
               ))
             )}

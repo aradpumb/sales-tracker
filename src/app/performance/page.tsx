@@ -9,9 +9,10 @@ type Perf = {
   name: string;
   role: string;
   revenue: number;
-  profit: number;
+  profit: number; // absolute margin amount (before expenses)
   expense: number;
-  margin: number; // 0-1
+  margin: number; // 0-1, margin ratio = profit / revenue
+  netProfit: number; // margin - expense
   imageUrl?: string | null;
 };
 
@@ -36,6 +37,13 @@ function periodRange(period: "month" | "last" | "life") {
 function inRange(d: Date, start: Date | null, end: Date | null) {
   if (!start || !end) return true;
   return d >= start && d <= end;
+}
+
+
+// Treat variants like "CMHK", "CM HK", "CM HK.", case-insensitively, as CMHK vendor
+function isCMHKVendor(vendor: string) {
+  const v = String(vendor || "").trim().toLowerCase();
+  return /cm\s*hk/.test(v) || v === "cmhk";
 }
 
 function getCommissionRate(profit: number) {
@@ -197,6 +205,7 @@ export default function PerformancePage() {
         expense: 0,
         profit: 0,
         margin: 0,
+        netProfit: 0,
         imageUrl: (sp as any).image_url ?? null,
       };
     }
@@ -217,8 +226,9 @@ export default function PerformancePage() {
           role: "Sales Executive",
           revenue: 0,
           expense: 0,
-          profit: 0, // we use this field to hold absolute margin amount
+          profit: 0, // absolute margin amount (before expenses)
           margin: 0,
+          netProfit: 0,
         };
       }
 
@@ -237,13 +247,26 @@ export default function PerformancePage() {
       const pickup = Number(s.pickup_cost ?? 0);
       const courier = Number(s.courier_charge ?? s.transport_fee ?? 0);
       const commission = Number(s.commission ?? 0);
-      const vendor = String(s.vendor ?? s.vendor ?? "");
 
-      const saleRevenue = unitSalesPrice * qty + unitInstall * qty + addRev + vat;
+      const vendorRaw =
+        s.vendor ??
+        (s.supplier ?? s.vendor_name ?? s.vendor_company ?? s.vendorTitle ?? "");
+      const cmhk = isCMHKVendor(String(vendorRaw));
+
+      // Revenue rules:
+      //  total price + (installation x qty) + vat (+ any additional revenue if present)
+      const saleRevenue =
+        unitSalesPrice * qty + unitInstall * qty  + addRev + vat;
+
+      // Procurement = (qty x unit purchase price) + pickup + courier
       const procurement = unitPurchase * qty + pickup + courier;
-      const baseMargin = saleRevenue - procurement - commission - vat;
-      const extraInstallDeduction = vendor === "CM HK." ? 0 : unitInstall * qty;
-      const saleMargin = baseMargin - extraInstallDeduction;
+
+      // Margin rules:
+      // CMHK: Revenue - Procurement - commission - vat
+      // non-CMHK: Revenue - Procurement - commission - vat - (qty * installation)
+      const saleMargin =
+        (saleRevenue - procurement - commission - vat) -
+        (cmhk ? 0 : unitInstall * qty);
 
       result[key].revenue += isFinite(saleRevenue) ? saleRevenue : 0;
       result[key].profit += isFinite(saleMargin) ? saleMargin : 0; // store margin amount
@@ -267,6 +290,7 @@ export default function PerformancePage() {
           expense: 0,
           profit: 0,
           margin: 0,
+          netProfit: 0,
         };
       }
 
@@ -278,17 +302,18 @@ export default function PerformancePage() {
       result[key].expense += isFinite(amt) ? amt : 0;
     }
 
-    // Finalize margin only; keep profit as aggregated from sales
+    // Finalize: compute margin ratio and net profit (margin - expense)
     const list = Object.values(result).map((r) => {
       const margin = r.revenue > 0 ? r.profit / r.revenue : 0;
-      return { ...r, margin };
+      const netProfit = r.profit - r.expense;
+      return { ...r, margin, netProfit };
     });
 
     // Apply sorting
     if (sortBy === "margin") {
       list.sort((a, b) => b.margin - a.margin);
     } else if (sortBy === "profit") {
-      list.sort((a, b) => b.profit - a.profit);
+      list.sort((a, b) => (b.netProfit ?? 0) - (a.netProfit ?? 0));
     } else if (sortBy === "revenue") {
       list.sort((a, b) => b.revenue - a.revenue);
     } else {
@@ -376,7 +401,7 @@ export default function PerformancePage() {
                                       <div className="text-sm text-[var(--muted)]">{m.role}</div>
                                   </div>
 
-                                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 gap-4 mt-4 sm:mt-0 text-center sm:text-right">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-4 mt-4 sm:mt-0 text-center sm:text-right">
                                       <div>
                                           <div className="text-xs text-[var(--muted)]">
                                             Revenue ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})
@@ -393,6 +418,12 @@ export default function PerformancePage() {
                                           <div className="text-xs text-[var(--muted)]">Expense</div>
                                           <div className="font-semibold">{currency(m.expense)}</div>
                                       </div>
+                                      <div>
+                                          <div className="text-xs text-[var(--muted)]">
+                                            Profit ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})
+                                          </div>
+                                          <div className="font-semibold">{currency((m as any).netProfit ?? (m.profit - m.expense))}</div>
+                                      </div>
                                   </div>
                               </div>
 
@@ -406,8 +437,9 @@ export default function PerformancePage() {
 
                                   <div className="mt-3 text-sm">
                                       {(() => {
-                                          const rate = getCommissionRate(m.profit);
-                                          const compensation = m.profit * rate;
+                                          const base = (m as any).netProfit ?? (m.profit - m.expense);
+                                          const rate = getCommissionRate(base);
+                                          const compensation = base * rate;
                                           return (
                                               <div className="mt-3 text-sm">
                                                   Compensation:{" "}

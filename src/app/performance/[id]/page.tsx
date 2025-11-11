@@ -270,7 +270,12 @@ export default function SalespersonDetailPage() {
     () => sales.reduce((acc, r) => acc + (r.margin ?? 0), 0),
     [sales]
   );
-  const commissionRate = getCommissionRate(marginTotal);
+  const expenseTotal = React.useMemo(
+    () => expenses.reduce((acc, e) => acc + (e.amount ?? 0), 0),
+    [expenses]
+  );
+  const profitTotal = React.useMemo(() => marginTotal - expenseTotal, [marginTotal, expenseTotal]);
+    const commissionRate = getCommissionRate(profitTotal);
 
   const saleCols: Column<any>[] = [
     { key: "date", header: "Sales Date", sortable: true, render: (r) => new Date(r.date).toLocaleDateString() },
@@ -348,8 +353,8 @@ export default function SalespersonDetailPage() {
       {/* Margin summary */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div className="text-sm text-[var(--muted)]">Total Margin ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})</div>
-          <div className="text-xl font-semibold">{currency(marginTotal)}</div>
+          <div className="text-sm text-[var(--muted)]">Total Profit ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})</div>
+          <div className="text-xl font-semibold">{currency(profitTotal)}</div>
         </div>
         <div className="mt-3">
           <div className="text-sm">
