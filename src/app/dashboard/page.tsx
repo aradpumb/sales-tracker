@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { loadExpenses, loadSales } from "@/lib/storage";
 import { ExpenseRecord, SalesRecord } from "@/lib/types";
 
@@ -53,13 +55,42 @@ function computeSaleProfit(rec: SalesRecord): number {
 }
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [sales, setSales] = React.useState<SalesRecord[]>([]);
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
 
   React.useEffect(() => {
+    if (status === "loading") return; // Still loading
+    if (!session) {
+      router.push("/login");
+      return;
+    }
     setSales(loadSales());
     setExpenses(loadExpenses());
-  }, []);
+  }, [session, status, router]);
+
+  // Show loading while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated (middleware should handle this, but just in case)
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg">Redirecting to login...</div>
+        </div>
+      </div>
+    );
+  }
 
   // Total Revenue = totalPrice + (installationCost * quantity) + vat across all sales
   const totalRevenue = sales.reduce((sum, r) => {
