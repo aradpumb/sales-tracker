@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 const SECRET_KEY = "pemo-secret-2024"; // Hardcoded secret key
 const EXTERNAL_API_URL = "https://external-api.pemo.io/v1/transactions";
 const EXCHANGE_RATE_API_URL = "https://api.exchangerate-api.com/v4/latest/USD";
-const LIMIT_PER_PAGE = 100;
+const LIMIT_PER_PAGE = 50;
 
 // Fallback rates in case API fails
 const FALLBACK_RATES: { [key: string]: number } = {
@@ -117,7 +117,7 @@ async function fetchAllTransactions(startDate: Date, endDate: Date): Promise<any
   let hasMore = true;
 
   while (hasMore) {
-    const url = `${EXTERNAL_API_URL}?startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}&page=${page}&limit=${LIMIT_PER_PAGE}`;
+    const url = `${EXTERNAL_API_URL}?startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}&page=${page}&limit=${LIMIT_PER_PAGE}&exportStatus=all`;
     console.log(`Fetching page ${page} from ${url}`);
     try {
       const response = await fetch(url, {
@@ -180,11 +180,21 @@ export async function GET(req: Request) {
     console.log(`Fetching PEMO transactions from ${startDate} to ${endDate}`);
 
     // Fetch all transactions from PEMO API
-    const transactions = await fetchAllTransactions(startDate, endDate);
+    const allTransactions = await fetchAllTransactions(startDate, endDate);
+
+    // Filter transactions to only include completed and exported ones
+    const transactions = allTransactions.filter(transaction =>
+      transaction.status === "completed" && transaction.exportStatus === "exported"
+    );
+
+    console.log(`Total transactions fetched: ${allTransactions.length}`);
+    console.log(`Filtered transactions (completed & exported): ${transactions.length}`);
 
     if (transactions.length === 0) {
       return NextResponse.json({
-        message: 'No transactions found',
+        message: 'No completed and exported transactions found',
+        totalFetched: allTransactions.length,
+        filteredCount: 0,
         processed: 0,
         errors: []
       });
@@ -247,31 +257,71 @@ export async function GET(req: Request) {
       }
     }
 
-    // Bulk insert expenses
+    // Bulk insert expenses using batch processing
     let createdExpenses: any[] = [];
+    const BATCH_SIZE = 10; // Process in smaller batches
 
     if (expenseData.length > 0) {
-      await prismaAny.$transaction(async (tx: any) => {
-        for (const expense of expenseData) {
-          try {
-            const created = await tx.expense.create({
-              data: expense,
-              include: { sales_person: true, customer: true }
-            });
-            createdExpenses.push(created);
-          } catch (error) {
-            errors.push({
-              salesPersonId: expense.sales_person_id.toString(),
-              error: error instanceof Error ? error.message : 'Database insertion failed'
-            });
+      console.log(`Processing ${expenseData.length} expenses in batches of ${BATCH_SIZE}`);
+
+      // Process expenses in batches to avoid long-running transactions
+      for (let i = 0; i < expenseData.length; i += BATCH_SIZE) {
+        const batch = expenseData.slice(i, i + BATCH_SIZE);
+
+        try {
+          // Use a separate transaction for each batch
+          await prismaAny.$transaction(
+            async (tx: any) => {
+              for (const expense of batch) {
+                try {
+                  const created = await tx.expense.create({
+                    data: expense,
+                    include: { sales_person: true, customer: true }
+                  });
+                  createdExpenses.push(created);
+                } catch (error) {
+                  console.error('Error creating individual expense:', error);
+                  errors.push({
+                    salesPersonId: expense.sales_person_id.toString(),
+                    error: error instanceof Error ? error.message : 'Database insertion failed'
+                  });
+                }
+              }
+            },
+            {
+              maxWait: 5000, // Wait up to 5 seconds for a transaction slot
+              timeout: 10000, // Transaction timeout of 10 seconds
+            }
+          );
+
+          console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1} completed: ${batch.length} expenses processed`);
+
+        } catch (batchError) {
+          console.error(`Batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, batchError);
+
+          // If batch transaction fails, try individual inserts as fallback
+          for (const expense of batch) {
+            try {
+              const created = await prismaAny.expense.create({
+                data: expense,
+                include: { sales_person: true, customer: true }
+              });
+              createdExpenses.push(created);
+            } catch (individualError) {
+              errors.push({
+                salesPersonId: expense.sales_person_id.toString(),
+                error: individualError instanceof Error ? individualError.message : 'Individual expense creation failed'
+              });
+            }
           }
         }
-      });
+      }
     }
 
     return NextResponse.json(safeJson({
       message: 'PEMO expenses processed successfully',
-      totalTransactions: transactions.length,
+      totalFetched: allTransactions.length,
+      filteredTransactions: transactions.length,
       processedExpenses: createdExpenses.length,
       created: createdExpenses,
       errors: errors
