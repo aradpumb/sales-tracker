@@ -5,14 +5,21 @@ export const runtime = "nodejs";
 
 const SECRET_KEY = "pemo-secret-2024"; // Hardcoded secret key
 const EXTERNAL_API_URL = "https://external-api.pemo.io/v1/transactions";
+const EXCHANGE_RATE_API_URL = "https://api.exchangerate-api.com/v4/latest/USD";
 const LIMIT_PER_PAGE = 100;
 
-// Currency conversion rates (you may want to fetch this from an API in production)
-const CURRENCY_TO_USD_RATES: { [key: string]: number } = {
+// Fallback rates in case API fails
+const FALLBACK_RATES: { [key: string]: number } = {
   AED: 0.272, // 1 AED = 0.272 USD (approximate)
   USD: 1,
-  // Add more currencies as needed
+  EUR: 1.08, // 1 EUR = 1.08 USD (approximate)
+  GBP: 1.27, // 1 GBP = 1.27 USD (approximate)
 };
+
+// Cache for exchange rates (valid for 1 hour)
+let exchangeRatesCache: { [key: string]: number } | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 function safeJson<T>(data: T) {
   return JSON.parse(
@@ -20,9 +27,58 @@ function safeJson<T>(data: T) {
   );
 }
 
+// Fetch exchange rates from external API
+async function fetchExchangeRates(): Promise<{ [key: string]: number }> {
+  try {
+    // Check cache first
+    const now = Date.now();
+    if (exchangeRatesCache && (now - cacheTimestamp) < CACHE_DURATION) {
+      return exchangeRatesCache;
+    }
+
+    console.log('Fetching fresh exchange rates from API...');
+    const response = await fetch(EXCHANGE_RATE_API_URL, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Exchange rate API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.rates) {
+      // Convert rates to USD base (API returns rates FROM USD, we need rates TO USD)
+      const usdRates: { [key: string]: number } = {};
+      usdRates.USD = 1; // USD to USD is always 1
+
+      for (const [currency, rate] of Object.entries(data.rates)) {
+        if (typeof rate === 'number') {
+          usdRates[currency] = 1 / rate; // Invert to get rate TO USD
+        }
+      }
+
+      // Cache the rates
+      exchangeRatesCache = usdRates;
+      cacheTimestamp = now;
+
+      console.log('Exchange rates updated successfully');
+      return usdRates;
+    } else {
+      throw new Error('Invalid response format from exchange rate API');
+    }
+  } catch (error) {
+    console.error('Failed to fetch exchange rates, using fallback rates:', error);
+    return FALLBACK_RATES;
+  }
+}
+
 // Convert currency amount to USD
-function convertToUSD(amount: number, currency: string): number {
-  const rate = CURRENCY_TO_USD_RATES[currency] || 1;
+async function convertToUSD(amount: number, currency: string): Promise<number> {
+  const rates = await fetchExchangeRates();
+  const rate = rates[currency] || 1;
 
   // Handle different currency formats
   if (currency === 'AED') {
@@ -62,7 +118,7 @@ async function fetchAllTransactions(startDate: Date, endDate: Date): Promise<any
 
   while (hasMore) {
     const url = `${EXTERNAL_API_URL}?startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}&page=${page}&limit=${LIMIT_PER_PAGE}`;
-
+    console.log(`Fetching page ${page} from ${url}`);
     try {
       const response = await fetch(url, {
         headers: {
@@ -171,8 +227,8 @@ export async function GET(req: Request) {
         const salesPersonId = salesPersonByName.get(createdFor.toLowerCase());
 
         if (salesPersonId) {
-          // Convert amount to USD
-          const expenseAmountUSD = convertToUSD(actualAmount, actualCurrency);
+          // Convert amount to USD using real-time rates
+          const expenseAmountUSD = await convertToUSD(actualAmount, actualCurrency);
 
           expenseData.push({
             sales_person_id: salesPersonId,
