@@ -24,7 +24,6 @@ function computeRevenue(rec: SalesRecord): number {
   const addRev = Number((rec as any).additionalRevenue ?? 0) || 0;
   const vat = Number((rec as any).vat ?? 0) || 0;
   const revenue = unitSales * qty + unitInstall * qty + addRev + vat;
-  console.log("revenue=",revenue);
   return isFinite(revenue) ? revenue : 0;
 }
 
@@ -99,10 +98,8 @@ export default function DashboardPage() {
 
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
 
-  // Lifetime net profit across all salespeople = sum of all sale margins − sum of all expenses
+  // Lifetime net profit
   const totalMargin = sales.reduce((sum, r) => sum + computeSaleProfit(r), 0);
-  console.log("margin=",totalMargin);
-  console.log("expense=",totalExpenses);
   const netProfit = totalMargin - totalExpenses;
 
   const recentSales = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
