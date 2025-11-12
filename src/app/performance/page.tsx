@@ -66,7 +66,7 @@ export default function PerformancePage() {
 
   const [period, setPeriod] = React.useState<"month" | "last" | "life">("month");
   // Default to "none" so period switches do not change order
-  const [sortBy, setSortBy] = React.useState<"none" | "revenue" | "profit" | "margin">("none");
+  const [sortBy, setSortBy] = React.useState<"none" | "revenue" | "profit" | "expense">("none");
   const [loading, setLoading] = React.useState(true);
 
   // Update URL and localStorage only on user action (button click)
@@ -310,8 +310,8 @@ export default function PerformancePage() {
     });
 
     // Apply sorting
-    if (sortBy === "margin") {
-      list.sort((a, b) => b.margin - a.margin);
+    if (sortBy === "expense") {
+      list.sort((a, b) => b.expense - a.expense);
     } else if (sortBy === "profit") {
       list.sort((a, b) => (b.netProfit ?? 0) - (a.netProfit ?? 0));
     } else if (sortBy === "revenue") {
@@ -364,7 +364,7 @@ export default function PerformancePage() {
       <div className="flex items-center justify-center gap-2">
         <button className="btn btn-secondary h-8 text-xs px-3 md:h-10 md:text-sm md:px-4" onClick={() => setSortBy("revenue")}>Sort by Revenue</button>
         <button className="btn btn-secondary h-8 text-xs px-3 md:h-10 md:text-sm md:px-4" onClick={() => setSortBy("profit")}>Sort by Profit</button>
-        <button className="btn btn-secondary h-8 text-xs px-3 md:h-10 md:text-sm md:px-4" onClick={() => setSortBy("margin")}>Sort by Margin</button>
+        <button className="btn btn-secondary h-8 text-xs px-3 md:h-10 md:text-sm md:px-4" onClick={() => setSortBy("expense")}>Sort by Expense</button>
       </div>
 
       {loading ? (
