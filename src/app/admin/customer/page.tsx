@@ -10,15 +10,17 @@ import { mapCustomerRows } from "@/lib/csv";
 type Row = {
   id: number;
   name: string;
-  phone?: string | null;
-  address?: string | null;
+  account_manager?: string | null;
+  status?: string | null;
+  email?: string | null;
+  contact?: string | null;
   created_at?: string | null;
 };
 
 export default function CustomerPage() {
   const [rows, setRows] = React.useState<Row[]>([]);
   const [open, setOpen] = React.useState(false);
-  const [form, setForm] = React.useState({ name: "", phone: "", address: "" });
+  const [form, setForm] = React.useState({ name: "", account_manager: "", status: "", contact: "", email: "" });
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -91,15 +93,17 @@ export default function CustomerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
-          phone: form.phone || undefined,
-          address: form.address || undefined,
+          account_manager: form.account_manager || undefined,
+          status: form.status || undefined,
+          contact: form.contact || undefined,
+          email: form.email || undefined,
         }),
       });
       if (!res.ok) throw new Error();
       const created = await res.json();
       setRows((prev) => [...prev, created]);
       setOpen(false);
-      setForm({ name: "", phone: "", address: "" });
+      setForm({ name: "", account_manager: "", status: "", contact: "", email: "" });
     } catch {
       // no-op
     }
@@ -209,12 +213,20 @@ export default function CustomerPage() {
             <input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
-            <label className="text-sm mb-1 block">Phone</label>
-            <input className="input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            <label className="text-sm mb-1 block">Account Manager</label>
+            <input className="input" value={form.account_manager} onChange={(e) => setForm((f) => ({ ...f, account_manager: e.target.value }))} />
           </div>
           <div>
-            <label className="text-sm mb-1 block">Address</label>
-            <input className="input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+            <label className="text-sm mb-1 block">Status</label>
+            <input className="input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} />
+          </div>
+          <div>
+            <label className="text-sm mb-1 block">Contact</label>
+            <input className="input" value={form.contact} onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))} />
+          </div>
+          <div>
+            <label className="text-sm mb-1 block">Email</label>
+            <input type="email" className="input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
         </form>
       </Modal>
@@ -254,19 +266,36 @@ export default function CustomerPage() {
             />
           </div>
           <div>
-            <label className="text-sm mb-1 block">Phone</label>
+            <label className="text-sm mb-1 block">Account Manager</label>
             <input
               className="input"
-              value={editRow?.phone ?? ""}
-              onChange={(e) => setEditRow((r) => (r ? { ...r, phone: e.target.value } : r))}
+              value={(editRow as any)?.account_manager ?? ""}
+              onChange={(e) => setEditRow((r: any) => (r ? { ...r, account_manager: e.target.value } : r))}
             />
           </div>
           <div>
-            <label className="text-sm mb-1 block">Address</label>
+            <label className="text-sm mb-1 block">Status</label>
             <input
               className="input"
-              value={editRow?.address ?? ""}
-              onChange={(e) => setEditRow((r) => (r ? { ...r, address: e.target.value } : r))}
+              value={(editRow as any)?.status ?? ""}
+              onChange={(e) => setEditRow((r: any) => (r ? { ...r, status: e.target.value } : r))}
+            />
+          </div>
+          <div>
+            <label className="text-sm mb-1 block">Contact</label>
+            <input
+              className="input"
+              value={(editRow as any)?.contact ?? ""}
+              onChange={(e) => setEditRow((r: any) => (r ? { ...r, contact: e.target.value } : r))}
+            />
+          </div>
+          <div>
+            <label className="text-sm mb-1 block">Email</label>
+            <input
+              type="email"
+              className="input"
+              value={(editRow as any)?.email ?? ""}
+              onChange={(e) => setEditRow((r: any) => (r ? { ...r, email: e.target.value } : r))}
             />
           </div>
         </form>

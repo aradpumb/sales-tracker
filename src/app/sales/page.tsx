@@ -620,17 +620,18 @@ export default function SalesPage() {
           </>
         }
       >
-        <form id="sale-form" onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm mb-1 block">Date</label>
-            <input
-              type="date"
-              className="input"
-              value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              required
-            />
-          </div>
+        <div className="max-h-[80vh] overflow-y-auto pr-1">
+          <form id="sale-form" onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm mb-1 block">Date</label>
+              <input
+                type="date"
+                className="input"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                required
+              />
+            </div>
 
           <div>
             <label className="text-sm mb-1 block">Salesperson</label>
@@ -673,7 +674,7 @@ export default function SalesPage() {
               className="input"
               value={(form as any).description ?? ""}
               onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value || undefined }))}
-              placeholder="Description of the sale (optional)"
+              placeholder="Description of the sale (eg: machine model)"
             />
           </div>
 
@@ -970,6 +971,7 @@ export default function SalesPage() {
             />
           </div>
         </form>
+        </div>
       </Modal>
 
       {isAdmin && (
