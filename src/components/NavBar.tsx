@@ -32,7 +32,8 @@ export default function NavBar() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" });
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    await signOut({ callbackUrl: `${origin}/login` });
   };
 
   return (
