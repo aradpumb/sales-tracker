@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {string} from "fast-check";
 
 type Perf = {
   id: string;
@@ -13,6 +14,8 @@ type Perf = {
   expense: number;
   margin: number; // 0-1, margin ratio = profit / revenue
   netProfit: number; // margin - expense
+  compensation?: number; // computed compensation for the selected period
+  compRate?: number; // optional slab rate when applicable
   imageUrl?: string | null;
 };
 
@@ -194,6 +197,31 @@ export default function PerformancePage() {
   const data: Perf[] = React.useMemo(() => {
     const { start, end } = periodRange(period);
 
+    // Build salesperson meta for compensation rules
+    const spMeta = new Map<string, { salary: number; exclude: boolean }>();
+    for (const sp of salesPersons) {
+      const id = String(sp.id);
+      const salary = Number((sp as any).salary ?? 0) || 0;
+
+      // Exclude flag can be 0/1, "0"/"1", true/false
+      const rawEx =
+        (sp as any).exclude_from_commission ??
+        (sp as any).excludeCommission ??
+        (sp as any).exclude ??
+        0;
+      let exclude = false;
+      if (typeof rawEx === "string") {
+        const v = rawEx.trim().toLowerCase();
+        exclude = v === "1" || v === "true" || v === "yes";
+      } else if (typeof rawEx === "number" || typeof rawEx === "bigint") {
+        exclude = Number(rawEx) === 1;
+      } else {
+        exclude = Boolean(rawEx);
+      }
+
+      spMeta.set(id, { salary, exclude });
+    }
+
     // Seed result record per salesperson
     const result: Record<string, Perf> = {};
     for (const sp of salesPersons) {
@@ -206,9 +234,14 @@ export default function PerformancePage() {
         profit: 0,
         margin: 0,
         netProfit: 0,
+        compensation: 0,
+        compRate: undefined,
         imageUrl: (sp as any).image_url ?? null,
       };
     }
+
+    // Track positive commission amounts per salesperson for compensation override
+    const commissionBySp = new Map<string, number>();
 
     // Aggregate sales -> revenue and margin (do NOT include expenses in margin)
     for (const s of sales) {
@@ -256,7 +289,7 @@ export default function PerformancePage() {
       // Revenue rules:
       //  total price + (installation x qty) + vat (+ any additional revenue if present)
       const saleRevenue =
-        unitSalesPrice * qty + unitInstall * qty  + addRev + vat;
+        unitSalesPrice * qty + unitInstall * qty + addRev + vat;
 
       // Procurement = (qty x unit purchase price) + pickup + courier
       const procurement = unitPurchase * qty + pickup + courier;
@@ -267,6 +300,11 @@ export default function PerformancePage() {
       const saleMargin =
         (saleRevenue - procurement - commission - vat) -
         (cmhk ? 0 : unitInstall * qty);
+
+      // Track positive commission amounts for excluded salespersons
+      if (commission > 0) {
+        commissionBySp.set(key, (commissionBySp.get(key) ?? 0) + commission);
+      }
 
       result[key].revenue += isFinite(saleRevenue) ? saleRevenue : 0;
       result[key].profit += isFinite(saleMargin) ? saleMargin : 0; // store margin amount
@@ -302,11 +340,33 @@ export default function PerformancePage() {
       result[key].expense += isFinite(amt) ? amt : 0;
     }
 
-    // Finalize: compute margin ratio and net profit (margin - expense)
+    // Finalize: compute margin ratio, net profit (margin - expense), and compensation
     const list = Object.values(result).map((r) => {
       const margin = r.revenue > 0 ? r.profit / r.revenue : 0;
       const netProfit = r.profit - r.expense;
-      return { ...r, margin, netProfit };
+
+      const meta = spMeta.get(r.id) || { salary: 0, exclude: false };
+      let compensation = 0;
+      let compRate: number | undefined = undefined;
+
+      if (meta.exclude) {
+        // Use summed positive commission entries from sales
+        compensation = commissionBySp.get(r.id) ?? 0;
+        compRate = undefined;
+      } else {
+        // Threshold: net profit must exceed 3x salary
+        const threshold = 3 * (Number(meta.salary) || 0);
+        if (netProfit > threshold && netProfit > 0) {
+          const rate = getCommissionRate(netProfit);
+          compRate = rate;
+          compensation = netProfit * rate;
+        } else {
+          compensation = 0;
+          compRate = 0;
+        }
+      }
+
+      return { ...r, margin, netProfit, compensation, compRate };
     });
 
     // Apply sorting
@@ -436,22 +496,24 @@ export default function PerformancePage() {
                                   </div>
 
                                   <div className="mt-3 text-sm">
-                                      {(() => {
-                                          const base = (m as any).netProfit ?? (m.profit - m.expense);
-                                          const rate = getCommissionRate(base);
-                                          const compensation = base * rate;
-                                          return (
-                                              <div className="mt-3 text-sm">
-                                                  Compensation:{" "}
-                                                  <span className="font-semibold text-emerald-600">
-                    {currency(compensation)}
-                  </span>{" "}
-                                                  <span className="text-xs text-[var(--muted)]">
-                    ({(rate * 100).toFixed(1)}%)
-                  </span>
-                                              </div>
-                                          );
-                                      })()}
+                                    {(() => {
+                                      const comp = (m as any).compensation ?? 0;
+                                      const rate = (m as any).compRate ?? 0;
+                                      const showRate = rate > 0;
+                                      return (
+                                        <div className="mt-3 text-sm">
+                                          Compensation:{" "}
+                                          <span className="font-semibold text-emerald-600">
+                                            {currency(comp)}
+                                          </span>{" "}
+                                          {showRate ? (
+                                            <span className="text-xs text-[var(--muted)]">
+                                              ({(rate * 100).toFixed(1)}%)
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                               </div>
                           </div>

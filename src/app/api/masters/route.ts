@@ -16,7 +16,14 @@ export async function GET() {
 
     const [salesPersons, customers, machineModels] = await Promise.all([
       prismaAny.sales_person.findMany({
-        select: { id: true, name: true, image_url: true, role: true },
+        select: {
+          id: true,
+          name: true,
+          image_url: true,
+          role: true,
+          salary: true,
+          exclude_from_commission: true,
+        },
         orderBy: { name: "asc" },
       }),
       prismaAny.customer.findMany({
