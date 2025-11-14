@@ -50,16 +50,17 @@ function isCMHKVendor(vendor: string) {
 }
 
 function getCommissionRate(profit: number) {
-  if (profit >= 1_000_000) return 0.15;
-  if (profit >= 900_000) return 0.13;
-  if (profit >= 800_000) return 0.12;
-  if (profit >= 700_000) return 0.11;
-  if (profit >= 600_000) return 0.10;
-  if (profit >= 500_000) return 0.09;
-  if (profit >= 400_000) return 0.07;
-  if (profit >= 300_000) return 0.06;
-  if (profit >= 200_000) return 0.05;
-  if (profit >= 100_000) return 0.04;
+  // Thresholds converted from AED to USD using ~0.272 USD per AED
+  if (profit >= 272_000) return 0.15;   // 1,000,000 AED
+  if (profit >= 244_800) return 0.13;   //   900,000 AED
+  if (profit >= 217_600) return 0.12;   //   800,000 AED
+  if (profit >= 190_400) return 0.11;   //   700,000 AED
+  if (profit >= 163_200) return 0.10;   //   600,000 AED
+  if (profit >= 136_000) return 0.09;   //   500,000 AED
+  if (profit >= 108_800) return 0.07;   //   400,000 AED
+  if (profit >= 81_600) return 0.06;    //   300,000 AED
+  if (profit >= 54_400) return 0.05;    //   200,000 AED
+  if (profit >= 27_200) return 0.04;    //   100,000 AED
   return 0;
 }
 
