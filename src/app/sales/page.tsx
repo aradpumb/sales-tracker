@@ -146,6 +146,7 @@ export default function SalesPage() {
   const [editRow, setEditRow] = React.useState<any | null>(null);
   const [form, setForm] = React.useState<SaleForm>({ ...defaultForm });
   const [loading, setLoading] = React.useState(true);
+  const [clearAllOpen, setClearAllOpen] = React.useState(false);
 
   // State for filters
   const [filterClient, setFilterClient] = React.useState("");
@@ -467,6 +468,21 @@ export default function SalesPage() {
     }
   }
 
+  async function onClearAllSales() {
+    try {
+      const res = await fetch("/api/sales/clear-all", { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error || "Failed to clear all sales data");
+      }
+      setRecords([]);
+      setClearAllOpen(false);
+      alert("All sales data has been cleared successfully.");
+    } catch (e: any) {
+      alert(e?.message || "Failed to clear all sales data");
+    }
+  }
+
   const columns: Column<any>[] = [
     { key: "date", header: "Sales Date", sortable: true, render: (r) => new Date(r.date).toLocaleDateString() },
     { key: "salesperson", header: "Sales Incharge", sortable: true },
@@ -546,7 +562,18 @@ export default function SalesPage() {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin ? <Button onClick={() => setOpen(true)}>Add Sale</Button> : null}
+          {isAdmin ? (
+            <>
+              <Button onClick={() => setOpen(true)}>Add Sale</Button>
+              <Button
+                variant="secondary"
+                onClick={() => setClearAllOpen(true)}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                Clear All Sales Data
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -1266,6 +1293,38 @@ export default function SalesPage() {
           </div>
         </Modal>
       )}
+
+      {/* Clear All Confirmation Modal */}
+      <Modal
+        open={clearAllOpen}
+        onClose={() => setClearAllOpen(false)}
+        title="Clear All Sales Data"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setClearAllOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={onClearAllSales}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Yes, Clear All
+            </Button>
+          </>
+        }
+      >
+        <div className="py-4">
+          <p className="text-gray-700 mb-4">
+            Are you sure you want to clear all sales data? This action cannot be undone and will permanently delete all sales records.
+          </p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-red-800 text-sm font-medium">
+              ⚠️ This will delete all {records.length} sales records permanently.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
