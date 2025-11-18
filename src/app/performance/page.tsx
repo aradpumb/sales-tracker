@@ -23,9 +23,29 @@ function currency(n: number) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-function periodRange(period: "month" | "last" | "life") {
+function periodRange(period: "month" | "last" | "life" | "custom", monthKey?: string) {
   if (period === "life") return { start: null as Date | null, end: null as Date | null };
+
   const now = new Date();
+
+  if (period === "custom") {
+    // monthKey format: YYYY-MM
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    if (typeof monthKey === "string") {
+      const m = monthKey.trim();
+      const y = Number(m.slice(0, 4));
+      const mm = Number(m.slice(5, 7)) - 1;
+      if (!Number.isNaN(y) && !Number.isNaN(mm) && mm >= 0 && mm <= 11) {
+        year = y;
+        month = mm;
+      }
+    }
+    const start = new Date(year, month, 1, 0, 0, 0, 0);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999); // last ms of the month
+    return { start, end };
+  }
+
   if (period === "month") {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     return { start, end: now };
@@ -64,78 +84,156 @@ function getCommissionRate(profit: number) {
   return 0;
 }
 
+// Month helpers
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+function listRecentMonths(count = 24) {
+  const res: Array<{ key: string; label: string }> = [];
+  const now = new Date();
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+    const label = d.toLocaleString(undefined, { month: "long", year: "numeric" });
+    res.push({ key, label });
+  }
+  return res;
+}
+function getMonthLabel(key: string) {
+  const y = Number(key.slice(0, 4));
+  const m = Number(key.slice(5, 7)) - 1;
+  if (Number.isNaN(y) || Number.isNaN(m)) return "";
+  const d = new Date(y, m, 1);
+  return d.toLocaleString(undefined, { month: "long", year: "numeric" });
+}
+function periodLabel(period: "month" | "last" | "life" | "custom", monthKey?: string) {
+  if (period === "month") return "This Month";
+  if (period === "last") return "Last Month";
+  if (period === "life") return "Lifetime";
+  return getMonthLabel(monthKey || currentMonthKey());
+}
 
 export default function PerformancePage() {
   const router = useRouter();
 
-  const [period, setPeriod] = React.useState<"month" | "last" | "life">("month");
+  const [period, setPeriod] = React.useState<"month" | "last" | "life" | "custom">("month");
+  const [selectedMonth, setSelectedMonth] = React.useState<string>(currentMonthKey());
   // Default to "none" so period switches do not change order
   const [sortBy, setSortBy] = React.useState<"none" | "revenue" | "profit" | "expense">("none");
   const [loading, setLoading] = React.useState(true);
 
   // Update URL and localStorage only on user action (button click)
   const setPeriodAndSync = React.useCallback(
-    (p: "month" | "last" | "life") => {
+    (p: "month" | "last" | "life" | "custom") => {
       setPeriod(p);
       try {
         if (typeof window !== "undefined") {
           window.localStorage.setItem("perfPeriod", p);
           const params = new URLSearchParams(window.location.search);
           params.set("period", p);
+          if (p !== "custom") {
+            params.delete("month");
+          } else {
+            params.set("month", selectedMonth || currentMonthKey());
+          }
+          router.replace(`?${params.toString()}`, { scroll: false });
+        }
+      } catch {}
+    },
+    [router, selectedMonth]
+  );
+
+  const setMonthAndSync = React.useCallback(
+    (key: string) => {
+      setSelectedMonth(key);
+      setPeriod("custom");
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("perfMonth", key);
+          window.localStorage.setItem("perfPeriod", "custom");
+          const params = new URLSearchParams(window.location.search);
+          params.set("period", "custom");
+          params.set("month", key);
           router.replace(`?${params.toString()}`, { scroll: false });
         }
       } catch {}
     },
     [router]
   );
+
   const initDone = React.useRef(false);
 
-  // Load persisted period from URL or localStorage
+  // Load persisted period and month from URL or localStorage
   React.useEffect(() => {
     try {
-      let initial: "month" | "last" | "life" = "month";
+      let initialPeriod: "month" | "last" | "life" | "custom" = "month";
+      let initialMonth: string = currentMonthKey();
       if (typeof window !== "undefined") {
         const sp = new URLSearchParams(window.location.search);
         const qp = sp.get("period");
-        if (qp === "month" || qp === "last" || qp === "life") {
-          initial = qp;
+        const qm = sp.get("month");
+        if (qm && /^\d{4}-\d{2}$/.test(qm)) {
+          initialMonth = qm;
+        } else {
+          const savedMonth = window.localStorage.getItem("perfMonth");
+          if (savedMonth && /^\d{4}-\d{2}$/.test(savedMonth)) {
+            initialMonth = savedMonth;
+          }
+        }
+        if (qp === "month" || qp === "last" || qp === "life" || qp === "custom") {
+          initialPeriod = qp as any;
         } else {
           const saved = window.localStorage.getItem("perfPeriod") as any;
-          if (saved === "month" || saved === "last" || saved === "life") {
-            initial = saved;
+          if (saved === "month" || saved === "last" || saved === "life" || saved === "custom") {
+            initialPeriod = saved;
           }
         }
       }
-      setPeriod(initial);
+      setSelectedMonth(initialMonth);
+      setPeriod(initialPeriod);
     } catch {} finally {
       initDone.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
-  // Persist period to URL and localStorage (only after initial load)
+  // Persist period and month to URL/localStorage (only after initial load)
   React.useEffect(() => {
     if (!initDone.current) return;
     try {
       if (typeof window !== "undefined") {
         window.localStorage.setItem("perfPeriod", period);
-        const sp = new URLSearchParams(window.location.search);
-        if (sp.get("period") !== period) {
-          sp.set("period", period);
-          router.replace(`?${sp.toString()}`, { scroll: false });
+        if (period === "custom") {
+          window.localStorage.setItem("perfMonth", selectedMonth);
         }
+        const sp = new URLSearchParams(window.location.search);
+        sp.set("period", period);
+        if (period === "custom") {
+          sp.set("month", selectedMonth || currentMonthKey());
+        } else {
+          sp.delete("month");
+        }
+        router.replace(`?${sp.toString()}`, { scroll: false });
       }
     } catch {}
-  }, [period, router]);
+  }, [period, selectedMonth, router]);
 
-  // Keep period in sync with browser back/forward
+  // Keep period and month in sync with browser back/forward
   React.useEffect(() => {
     const onPopState = () => {
       try {
         const sp = new URLSearchParams(window.location.search);
         const qp = sp.get("period");
-        if (qp === "month" || qp === "last" || qp === "life") {
-          setPeriod(qp);
+        const qm = sp.get("month");
+        if (qp === "month" || qp === "last" || qp === "life" || qp === "custom") {
+          setPeriod(qp as any);
+        }
+        if (qm && /^\d{4}-\d{2}$/.test(qm)) {
+          setSelectedMonth(qm);
         }
       } catch {}
     };
@@ -143,14 +241,18 @@ export default function PerformancePage() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Handle browser back/forward: sync period from current URL
+  // Handle browser back/forward: sync period and month from current URL
   React.useEffect(() => {
     const onPopState = () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const qp = urlParams.get("period");
-        if (qp === "month" || qp === "last" || qp === "life") {
-          setPeriod(qp);
+        const qm = urlParams.get("month");
+        if (qp === "month" || qp === "last" || qp === "life" || qp === "custom") {
+          setPeriod(qp as any);
+        }
+        if (qm && /^\d{4}-\d{2}$/.test(qm)) {
+          setSelectedMonth(qm);
         }
       } catch {}
     };
@@ -196,7 +298,7 @@ export default function PerformancePage() {
   }, [salesPersons]);
 
   const data: Perf[] = React.useMemo(() => {
-    const { start, end } = periodRange(period);
+    const { start, end } = periodRange(period, selectedMonth);
 
     // Build salesperson meta for compensation rules
     const spMeta = new Map<string, { salary: number; exclude: boolean }>();
@@ -389,7 +491,7 @@ export default function PerformancePage() {
     }
 
     return list;
-  }, [period, sortBy, salesPersons, sales, expenses, baseIndex]);
+  }, [period, selectedMonth, sortBy, salesPersons, sales, expenses, baseIndex]);
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center py-16">
@@ -401,7 +503,7 @@ export default function PerformancePage() {
           <p className="text-[var(--muted)]">Track your team's success metrics</p>
         </div>
 
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex items-center justify-center flex-wrap gap-2">
         <button
           className={`btn ${period === "month" ? "btn-primary" : "btn-secondary"} h-8 text-xs px-3 md:h-10 md:text-sm md:px-4`}
           onClick={() => setPeriodAndSync("month")}
@@ -420,6 +522,20 @@ export default function PerformancePage() {
         >
           Lifetime
         </button>
+
+        <div className="flex items-center gap-2 ml-2">
+          <select
+            className="select h-8 text-xs md:h-10 md:text-sm"
+            value={selectedMonth}
+            onChange={(e) => setMonthAndSync(e.target.value)}
+          >
+            {listRecentMonths().map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex items-center justify-center gap-2">
@@ -435,7 +551,7 @@ export default function PerformancePage() {
       ) : (
         <div className="space-y-6">
           {data.map((m) => (
-              <Link key={m.id} href={`/performance/${m.id}?period=${period}`} className="block">
+              <Link key={m.id} href={`/performance/${m.id}?period=${period}${period === "custom" ? `&month=${selectedMonth}` : ""}`} className="block">
                   <div className="card p-5 hover:shadow-md transition-shadow">
                       <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                           {m.imageUrl ? (
@@ -465,23 +581,25 @@ export default function PerformancePage() {
                                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-4 mt-4 sm:mt-0 text-center sm:text-right">
                                       <div>
                                           <div className="text-xs text-[var(--muted)]">
-                                            Revenue ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})
+                                            Revenue ({periodLabel(period, selectedMonth)})
                                           </div>
                                           <div className="font-semibold">{currency(m.revenue)}</div>
                                       </div>
                                       <div>
                                           <div className="text-xs text-[var(--muted)]">
-                                            Margin ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})
+                                            Margin ({periodLabel(period, selectedMonth)})
                                           </div>
                                           <div className="font-semibold">{currency(m.profit)}</div>
                                       </div>
                                       <div>
-                                          <div className="text-xs text-[var(--muted)]">Expense</div>
+                                          <div className="text-xs text-[var(--muted)]">
+                                              Expense ({periodLabel(period, selectedMonth)})
+                                          </div>
                                           <div className="font-semibold">{currency(m.expense)}</div>
                                       </div>
                                       <div>
                                           <div className="text-xs text-[var(--muted)]">
-                                            Profit ({period === "month" ? "This Month" : period === "last" ? "Last Month" : "Lifetime"})
+                                            Profit ({periodLabel(period, selectedMonth)})
                                           </div>
                                           <div className="font-semibold">{currency((m as any).netProfit ?? (m.profit - m.expense))}</div>
                                       </div>

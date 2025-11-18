@@ -55,11 +55,77 @@ function computeSaleProfit(rec: SalesRecord): number {
   return isFinite(margin) ? margin : 0;
 }
 
+// Month helpers
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+function listRecentMonths(count = 24) {
+  const res: Array<{ key: string; label: string }> = [];
+  const now = new Date();
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+    const label = d.toLocaleString(undefined, { month: "long", year: "numeric" });
+    res.push({ key, label });
+  }
+  return res;
+}
+function getMonthRange(monthKey: string) {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
+  if (monthKey && /^\d{4}-\d{2}$/.test(monthKey)) {
+    year = Number(monthKey.slice(0, 4));
+    month = Number(monthKey.slice(5, 7)) - 1;
+  }
+  const start = new Date(year, month, 1, 0, 0, 0, 0);
+  const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+function inRange(d: Date, start: Date, end: Date) {
+  return d >= start && d <= end;
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sales, setSales] = React.useState<SalesRecord[]>([]);
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
+
+  // Month selection state
+  const [monthKey, setMonthKey] = React.useState<string>("");
+
+  // Initialize from URL if present
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search);
+        const m = sp.get("month");
+        if (m && /^\d{4}-\d{2}$/.test(m)) {
+          setMonthKey(m);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Persist month to URL on change
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search);
+        if (monthKey) {
+          sp.set("month", monthKey);
+        } else {
+          sp.delete("month");
+        }
+        router.replace(`?${sp.toString()}`, { scroll: false });
+      }
+    } catch {}
+  }, [monthKey, router]);
 
   React.useEffect(() => {
     if (status === "loading") return; // Still loading
@@ -70,6 +136,25 @@ export default function DashboardPage() {
     setSales(loadSales());
     setExpenses(loadExpenses());
   }, [session, status, router]);
+
+  // Filtered datasets for selected month (empty = Lifetime, keep hooks order stable by defining before returns)
+  const filteredSales = React.useMemo(() => {
+    if (!monthKey) return sales;
+    const { start, end } = getMonthRange(monthKey);
+    return sales.filter((r) => {
+      const d = new Date((r as any).date);
+      return inRange(d, start, end);
+    });
+  }, [sales, monthKey]);
+
+  const filteredExpenses = React.useMemo(() => {
+    if (!monthKey) return expenses;
+    const { start, end } = getMonthRange(monthKey);
+    return expenses.filter((e) => {
+      const d = new Date((e as any).date);
+      return inRange(d, start, end);
+    });
+  }, [expenses, monthKey]);
 
   // Show loading while checking authentication
   if (status === "loading") {
@@ -93,23 +178,39 @@ export default function DashboardPage() {
     );
   }
 
-  // Total Revenue matches Sales page formula across all sales
-  const totalRevenue = sales.reduce((sum, r) => sum + computeRevenue(r), 0);
+  // Using filtered datasets defined above
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-
-  // Lifetime net profit
-  const totalMargin = sales.reduce((sum, r) => sum + computeSaleProfit(r), 0);
+  // Totals for selected month
+  const totalRevenue = filteredSales.reduce((sum, r) => sum + computeRevenue(r), 0);
+  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalMargin = filteredSales.reduce((sum, r) => sum + computeSaleProfit(r), 0);
   const netProfit = totalMargin - totalExpenses;
 
-  const recentSales = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
-  const recentExpenses = [...expenses].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 5);
+  const recentSales = [...filteredSales].sort((a, b) => +new Date((b as any).date) - +new Date((a as any).date)).slice(0, 5);
+  const recentExpenses = [...filteredExpenses].sort((a, b) => +new Date((b as any).date) - +new Date((a as any).date)).slice(0, 5);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold gradient-title">Dashboard</h1>
-        <p className="text-[var(--muted)] mt-1">Overview of your mining operation</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold gradient-title">Dashboard</h1>
+          <p className="text-[var(--muted)] mt-1">Overview of your mining operation</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-[var(--muted)]">Month</label>
+          <select
+            className="select h-9 text-sm"
+            value={monthKey}
+            onChange={(e) => setMonthKey(e.target.value)}
+          >
+            <option value="">Lifetime</option>
+            {listRecentMonths().map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
