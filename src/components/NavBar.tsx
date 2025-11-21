@@ -15,17 +15,21 @@ export default function NavBar() {
   const [open, setOpen] = React.useState(false);
   const { data: session, status } = useSession();
 
-  const user = session?.user;
-  const isAdmin = (user as any)?.role === "ADMIN";
+  const user = session?.user as any;
+  const isAdmin = user?.role === "ADMIN";
   const isAuthenticated = status === "authenticated";
 
-  const links = [
+  // Links depend on role: ADMIN sees all, USER only Sales + Performance
+  const allLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/sales", label: "Sales" },
     { href: "/expenses", label: "Expenses" },
     { href: "/performance", label: "Performance" },
-      { href: "/admin/sales-person", label: "Settings" }
+    { href: "/admin/sales-person", label: "Settings" },
   ];
+  const links = isAdmin
+    ? allLinks
+    : allLinks.filter((l) => l.href === "/sales" || l.href === "/performance");
 
   React.useEffect(() => {
     setOpen(false);
@@ -38,7 +42,7 @@ export default function NavBar() {
 
   return (
     <nav className="container-app relative flex items-center justify-between py-4">
-      <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3">
+      <Link href={isAuthenticated ? (isAdmin ? "/dashboard" : "/performance") : "/"} className="flex items-center gap-3">
         <div
           className="w-8 h-8 rounded-lg"
           style={{

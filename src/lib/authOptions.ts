@@ -10,8 +10,8 @@ const prisma: any = prismaClient;
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
-        strategy: "jwt", // required for credentials
-    },
+    strategy: "jwt", // required for credentials
+  },
   providers: [
     Credentials({
       id: "credentials",
@@ -39,18 +39,38 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      // Attach role to session.user
+    async jwt({ token, user }) {
+      // Persist role and id in the token
+      if (user) {
+        token.role = (user as any).role ?? "USER";
+        token.id = (user as any).id ?? token.sub;
+      }
+      // If token already exists (subsequent calls), keep existing role/id
+      token.role = token.role ?? "USER";
+      token.id = token.id ?? token.sub;
+      return token as any;
+    },
+    async session({ session, user, token }) {
+      // Attach role and id to session.user from token if available
       if (session?.user) {
-        // user is only populated for database sessions via adapter
-        // fetch role if needed
-        const dbUser = user?.id
-          ? user
-          : await prisma.user.findUnique({
-              where: { email: session.user.email! },
-            });
-        (session.user as any).role = dbUser?.role ?? "USER";
-        (session.user as any).id = String(dbUser?.id ?? "");
+        const roleFromToken = (token as any)?.role;
+        const idFromToken = (token as any)?.id;
+        if (roleFromToken) {
+          (session.user as any).role = roleFromToken;
+        }
+        if (idFromToken) {
+          (session.user as any).id = String(idFromToken);
+        }
+        // Fallback to DB lookup if role missing
+        if (!(session.user as any).role) {
+          const dbUser = user?.id
+            ? user
+            : await prisma.user.findUnique({
+                where: { email: session.user.email! },
+              });
+          (session.user as any).role = (dbUser as any)?.role ?? "USER";
+          (session.user as any).id = String((dbUser as any)?.id ?? "");
+        }
       }
       return session;
     },
