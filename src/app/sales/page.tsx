@@ -1299,7 +1299,7 @@ export default function SalesPage() {
         open={clearAllOpen}
         onClose={() => setClearAllOpen(false)}
         title="Clear All Sales Data"
-        size="sm"
+
         footer={
           <>
             <Button variant="secondary" onClick={() => setClearAllOpen(false)}>
