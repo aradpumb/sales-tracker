@@ -649,6 +649,7 @@ export default function SalesPage() {
       >
         <div className="max-h-[80vh] overflow-y-auto pr-1">
           <form id="sale-form" onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Sales fields */}
             <div>
               <label className="text-sm mb-1 block">Date</label>
               <input
@@ -660,344 +661,312 @@ export default function SalesPage() {
               />
             </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Salesperson</label>
-            <select
-              className="select"
-              value={form.salesPersonId ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, salesPersonId: Number(e.target.value) || undefined }))}
-              required
-            >
-              <option value="">Select salesperson</option>
-              {salesPersons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Salesperson</label>
+              <select
+                className="select"
+                value={form.salesPersonId ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, salesPersonId: Number(e.target.value) || undefined }))}
+                required
+              >
+                <option value="">Select salesperson</option>
+                {salesPersons.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Customer</label>
-            <select
-              className="select"
-              value={form.customerId ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, customerId: Number(e.target.value) || undefined }))}
-              required
-            >
-              <option value="">Select customer</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Customer</label>
+              <select
+                className="select"
+                value={form.customerId ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, customerId: Number(e.target.value) || undefined }))}
+                required
+              >
+                <option value="">Select customer</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="md:col-span-2">
-            <label className="text-sm mb-1 block">Description</label>
-            <input
-              type="text"
-              className="input"
-              value={(form as any).description ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value || undefined }))}
-              placeholder="Description of the sale (eg: machine model)"
-            />
-          </div>
+            <div className="md:col-span-2">
+              <label className="text-sm mb-1 block">Description</label>
+              <input
+                type="text"
+                className="input"
+                value={(form as any).description ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value || undefined }))}
+                placeholder="Description of the sale (eg: machine model)"
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Invoice Number</label>
-            <input
-              type="text"
-              className="input"
-              value={form.invoiceNumber ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, invoiceNumber: e.target.value || undefined }))}
-              placeholder="e.g., SGIE3162"
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Invoice Number</label>
+              <input
+                type="text"
+                className="input"
+                value={form.invoiceNumber ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, invoiceNumber: e.target.value || undefined }))}
+                placeholder="e.g., SGIE3162"
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Courier Link</label>
-            <input
-              type="url"
-              className="input"
-              value={form.courierLink ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, courierLink: e.target.value || undefined }))}
-              placeholder="https://tracking.example.com/..."
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Quantity</label>
+              <input
+                type="number"
+                className="input"
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: Number(e.target.value) }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Unit Purchase Price</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={(form as any).purchasedPrice}
-              onChange={(e) => setForm((f: any) => ({ ...f, purchasedPrice: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Unit Sales Price</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.soldPrice}
+                onChange={(e) => setForm((f) => ({ ...f, soldPrice: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Purchased Date</label>
-            <input
-              type="date"
-              className="input"
-              value={form.purchasedDate ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, purchasedDate: e.target.value }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Unit Installation Charge</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.installationCost ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, installationCost: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Total Purchase</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.totalPurchase ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, totalPurchase: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Additional Revenue</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.additionalRevenue}
+                onChange={(e) => setForm((f) => ({ ...f, additionalRevenue: Number(e.target.value) }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Unit Sales Price</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.soldPrice}
-              onChange={(e) => setForm((f) => ({ ...f, soldPrice: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">VAT</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.vat ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, vat: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Total Price</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.totalPrice ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, totalPrice: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Commission</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.commission ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, commission: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Transport Fee</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.transportFee ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, transportFee: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Receipt Date</label>
+              <input
+                type="date"
+                className="input"
+                value={(form as any).receiptDate ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, receiptDate: e.target.value || undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Additional Cost</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.additionalCost ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, additionalCost: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Receipt Account</label>
+              <input
+                className="input"
+                value={(form as any).receiptAccount ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, receiptAccount: e.target.value || undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Additional Revenue</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.additionalRevenue}
-              onChange={(e) => setForm((f) => ({ ...f, additionalRevenue: Number(e.target.value) }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Hosting Rate</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={(form as any).hostingRate ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, hostingRate: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Revenue</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.revenue ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, revenue: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Delivery Date</label>
+              <input
+                type="date"
+                className="input"
+                value={(form as any).deliveryDate ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, deliveryDate: e.target.value || undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Unit Installation Charge</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.installationCost ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, installationCost: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Plug-in Date</label>
+              <input
+                type="date"
+                className="input"
+                value={(form as any).pluginDate ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, pluginDate: e.target.value || undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">VAT</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.vat ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, vat: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            {/* Purchase fields */}
+            <div>
+              <label className="text-sm mb-1 block">Unit Purchase Price</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={(form as any).purchasedPrice}
+                onChange={(e) => setForm((f: any) => ({ ...f, purchasedPrice: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Commission</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={form.commission ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, commission: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Purchased Date</label>
+              <input
+                type="date"
+                className="input"
+                value={form.purchasedDate ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, purchasedDate: e.target.value }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Quantity</label>
-            <input
-              type="number"
-              className="input"
-              value={form.quantity}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: Number(e.target.value) }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Vendor</label>
+              <input
+                className="input"
+                value={form.vendor ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value || undefined }))}
+                placeholder="Vendor name"
+              />
+            </div>
 
+            <div>
+              <label className="text-sm mb-1 block">Bill Number</label>
+              <input
+                className="input"
+                value={form.billNo ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, billNo: e.target.value || undefined }))}
+                placeholder="ADG221"
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Bill Number</label>
-            <input
-              className="input"
-              value={form.billNo ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, billNo: e.target.value || undefined }))}
-              placeholder="ADG221"
-            />
-          </div>
+            <div className="md:col-span-2">
+              <label className="text-sm mb-1 block">Procurement Incharge</label>
+              <input
+                className="input"
+                value={form.procurementPerson ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, procurementPerson: e.target.value || undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Vendor</label>
-            <input
-              className="input"
-              value={form.vendor ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value || undefined }))}
-              placeholder="Vendor name"
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Pickup Cost</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={(form as any).pickupCost ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, pickupCost: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">VAT Applicable</label>
-            <select
-              className="select"
-              value={form.vatApplicable === undefined ? "" : form.vatApplicable ? "yes" : "no"}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  vatApplicable: e.target.value === "" ? undefined : e.target.value === "yes",
-                }))
-              }
-            >
-              <option value="">Select</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Courier Charge</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={(form as any).courierCharge ?? ""}
+                onChange={(e) => setForm((f: any) => ({ ...f, courierCharge: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div className="md:col-span-2">
-            <label className="text-sm mb-1 block">Procurement Incharge</label>
-            <input
-              className="input"
-              value={form.procurementPerson ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, procurementPerson: e.target.value || undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">VAT Applicable</label>
+              <select
+                className="select"
+                value={form.vatApplicable === undefined ? "" : form.vatApplicable ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    vatApplicable: e.target.value === "" ? undefined : e.target.value === "yes",
+                  }))
+                }
+              >
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Pickup Cost</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={(form as any).pickupCost ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, pickupCost: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Transport Fee</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.transportFee ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, transportFee: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Courier Charge</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={(form as any).courierCharge ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, courierCharge: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
+            <div>
+              <label className="text-sm mb-1 block">Additional Cost</label>
+              <input
+                type="number"
+                step="0.01"
+                className="input"
+                value={form.additionalCost ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, additionalCost: e.target.value ? Number(e.target.value) : undefined }))}
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Receipt Date</label>
-            <input
-              type="date"
-              className="input"
-              value={(form as any).receiptDate ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, receiptDate: e.target.value || undefined }))}
-            />
-          </div>
+            {/* Remaining fields */}
+            <div>
+              <label className="text-sm mb-1 block">Courier Link</label>
+              <input
+                type="url"
+                className="input"
+                value={form.courierLink ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, courierLink: e.target.value || undefined }))}
+                placeholder="https://tracking.example.com/..."
+              />
+            </div>
 
-          <div>
-            <label className="text-sm mb-1 block">Receipt Account</label>
-            <input
-              className="input"
-              value={(form as any).receiptAccount ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, receiptAccount: e.target.value || undefined }))}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm mb-1 block">Hosting Rate</label>
-            <input
-              type="number"
-              step="0.01"
-              className="input"
-              value={(form as any).hostingRate ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, hostingRate: e.target.value ? Number(e.target.value) : undefined }))}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm mb-1 block">Delivery Date</label>
-            <input
-              type="date"
-              className="input"
-              value={(form as any).deliveryDate ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, deliveryDate: e.target.value || undefined }))}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm mb-1 block">Plug-in Date</label>
-            <input
-              type="date"
-              className="input"
-              value={(form as any).pluginDate ?? ""}
-              onChange={(e) => setForm((f: any) => ({ ...f, pluginDate: e.target.value || undefined }))}
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="text-sm mb-1 block">Remarks</label>
-            <textarea
-              className="textarea"
-              rows={3}
-              value={form.remarks ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
-            />
-          </div>
-        </form>
+            <div className="md:col-span-2">
+              <label className="text-sm mb-1 block">Remarks</label>
+              <textarea
+                className="textarea"
+                rows={3}
+                value={form.remarks ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
+              />
+            </div>
+          </form>
         </div>
       </Modal>
 

@@ -195,7 +195,7 @@ export default function CustomerPage() {
             Upload CSV
           </Button>
 
-          <Button onClick={() => setOpen(true)}>Add Customer</Button>
+          <Button onClick={() => { setForm({ name: "", account_manager: "", status: "", contact: "", email: "" }); setOpen(true); }}>Add Customer</Button>
         </div>
       </div>
 
@@ -204,7 +204,7 @@ export default function CustomerPage() {
       <Modal open={open} onClose={() => setOpen(false)} title="Add Customer" footer={
         <>
           <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="cust-form" type="submit">Save</Button>
+          <Button onClick={() => (document.getElementById("cust-form") as HTMLFormElement | null)?.requestSubmit()}>Save</Button>
         </>
       }>
         <form id="cust-form" onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">

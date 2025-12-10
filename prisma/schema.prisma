@@ -67,10 +67,10 @@ model VerificationToken {
 model customer {
   id              BigInt    @id @default(autoincrement())
   name            String    @db.VarChar(100)
-  account_manager String    @db.VarChar(100)
+  account_manager String?   @db.VarChar(100)
   contact         String?   @db.VarChar(50)
   email           String?   @unique @db.VarChar(255)
-  status          String    @db.VarChar(300)
+  status          String?   @db.VarChar(300)
   expense         expense[]
   sale            sale[]
 }
